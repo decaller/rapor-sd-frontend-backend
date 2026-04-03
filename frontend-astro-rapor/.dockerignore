@@ -1,0 +1,11 @@
+node_modules
+npm-debug.log*
+dist
+.astro
+.env
+.env.*
+!.env.example
+*.log
+.git
+.gitignore
+old_index.html

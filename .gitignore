@@ -1,0 +1,44 @@
+# ── Environment ──────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Node ─────────────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Astro build ───────────────────────────────────────────────────────────────
+dist/
+.astro/
+
+# ── Database ─────────────────────────────────────────────────────────────────
+*.db
+*.sqlite
+
+# ── Google credentials (NEVER commit) ────────────────────────────────────────
+google-service-account.json
+**/google-service-account.json
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Caddy data (auto-generated TLS certs etc.) ───────────────────────────────
+caddy_data/
+caddy_config/
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# ── Backups ──────────────────────────────────────────────────────────────────
+*.bak
+.git.bak/

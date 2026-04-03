@@ -1,0 +1,42 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+@theme {
+  --color-atlantis-50: #f9faeb;
+  --color-atlantis-100: #f1f3d4;
+  --color-atlantis-200: #e3e8ae;
+  --color-atlantis-300: #ced87e;
+  --color-atlantis-400: #bcc95f;
+  --color-atlantis-500: #9bab37;
+  --color-atlantis-600: #798828;
+  --color-atlantis-700: #5c6823;
+  --color-atlantis-800: #4a5321;
+  --color-atlantis-900: #3f481f;
+  --color-atlantis-950: #21270c;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+main {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 700px;
+}
+
+iframe {
+  flex-grow: 1;
+  border: none;
+}
+
+@media (max-width: 767px) {
+  .mobile-menu-open {
+    display: block !important;
+  }
+}

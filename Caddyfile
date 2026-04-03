@@ -1,0 +1,29 @@
+# Rapor Monorepo — Caddyfile
+# Caddy acts as a reverse proxy:
+#   /api/* → backend (Express on port 3000)
+#   /*     → frontend (Astro static server on port 4321)
+#
+# In development (DOMAIN=localhost), Caddy serves HTTP on port 80.
+# In production (DOMAIN=your-real-domain.com), Caddy auto-provisions TLS on 443.
+
+{$DOMAIN} {
+
+    # ── Backend API ──────────────────────────────────────────────────────────
+    # All /api/* requests are forwarded to the backend container.
+    # The /api/ prefix is preserved so Express routes remain unchanged.
+    handle /api/* {
+        reverse_proxy backend:{$BACKEND_PORT:3000}
+    }
+
+    # ── Frontend ─────────────────────────────────────────────────────────────
+    # Everything else is forwarded to the Astro static server.
+    handle {
+        reverse_proxy frontend:4321
+    }
+
+    # ── Logging ──────────────────────────────────────────────────────────────
+    log {
+        output stdout
+        format console
+    }
+}

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapor SD</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <style>
+        /* Custom styles for the page */
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden; /* Prevent body scrollbars */
+        }
+        main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            /* Solution 2: Guarantee a minimum width for the iframe's container */
+            min-width: 700px; 
+        }
+        iframe {
+            flex-grow: 1;
+            border: none;
+        }
+        /* On mobile, ensure dropdowns don't hide content */
+        @media (max-width: 767px) {
+            .mobile-menu-open {
+                display: block !important;
+            }
+        }
+    </style>
+    <script>
+        // Customizing Tailwind CSS with the new color palette
+        tailwind.config = {
+          theme: {
+            extend: {
+              colors: {
+                atlantis: {
+                  '50': '#f9faeb',
+                  '100': '#f1f3d4',
+                  '200': '#e3e8ae',
+                  '300': '#ced87e',
+                  '400': '#bcc95f',
+                  '500': '#9bab37',
+                  '600': '#798828',
+                  '700': '#5c6823',
+                  '800': '#4a5321',
+                  '900': '#3f481f',
+                  '950': '#21270c',
+                }
+              }
+            }
+          }
+        }
+    </script>
+</head>
+<body class="bg-atlantis-50">
+
+    <!-- Navbar -->
+    <header id="main-header" class="bg-atlantis-900 shadow-lg z-20">
+        <nav class="container mx-auto px-4">
+            <!-- Navigation container -->
+            <div class="flex items-center justify-between w-full">
+                <div class="flex items-center">
+                     <a href="#" class="text-xl font-bold text-white pr-4">Rapor SD</a>
+                    <div id="nav-container" class="flex items-center">
+                        <!-- Navigation will be dynamically generated here -->
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center space-x-2 pl-4">
+                    <button id="refresh-iframe-btn" class="bg-atlantis-700 text-white p-2 rounded-md hover:bg-atlantis-600 disabled:bg-gray-500 disabled:cursor-not-allowed" title="Refresh Frame" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5m-5-2a9 9 0 112.55 12.08" />
+                        </svg>
+                    </button>
+                    <button id="open-in-new-tab-btn" class="bg-atlantis-700 text-white p-2 rounded-md hover:bg-atlantis-600 disabled:bg-gray-500 disabled:cursor-not-allowed" title="Open in New Tab" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content Area with iFrame -->
+    <main>
+        <div id="loader" class="flex flex-col items-center justify-center h-full bg-gray-100 text-gray-600 text-center p-4">
+             <!-- Initial welcome message -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+            </svg>
+            <p class="text-xl font-semibold">Selamat Datang!</p>
+            <p class="text-md mt-2">Silakan pilih menu di atas untuk menampilkan data.</p>
+        </div>
+        <iframe id="content-frame" class="hidden"></iframe>
+    </main>
+
+    <!-- Auto-hiding Loading Toast Notification Element -->
+    <div id="toast-notification" class="fixed bottom-5 right-5 bg-atlantis-900 text-white py-3 px-5 rounded-lg shadow-lg opacity-0 transition-opacity duration-300 z-50">
+        <p>Loading link...</p>
+    </div>
+
+    <!-- Auto-hiding Refresh Toast Notification Element -->
+    <div id="refresh-toast" class="fixed bottom-5 right-5 bg-atlantis-900 text-white py-3 px-5 rounded-lg shadow-lg opacity-0 transition-opacity duration-300 z-50 hidden">
+        <p>Tampilan kosong? <a href="#" id="refresh-toast-link" class="underline hover:text-atlantis-300">Refresh</a></p>
+    </div>
+
+    <!-- Persistent Breadcrumb Bar -->
+    <div id="breadcrumb-bar" class="fixed bottom-5 left-5 bg-atlantis-800 text-white py-2 px-3 shadow-lg rounded-full z-40 hidden flex items-center justify-between transition-all duration-300">
+        <span id="breadcrumb-text" class="text-sm truncate ml-2 mr-4">Path will be shown here...</span>
+        <div class="flex items-center space-x-1 flex-shrink-0">
+            <button id="breadcrumb-new-tab-btn" class="p-2 rounded-full hover:bg-atlantis-700" title="Open in New Tab">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                </svg>
+            </button>
+            <button id="breadcrumb-close-btn" class="p-2 rounded-full hover:bg-atlantis-700" title="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+
+    <!-- The logic to build the menu from the fetched data -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const navContainer = document.getElementById('nav-container');
+        const contentFrame = document.getElementById('content-frame');
+        const loader = document.getElementById('loader');
+        const toast = document.getElementById('toast-notification');
+        const refreshToast = document.getElementById('refresh-toast');
+        const refreshToastLink = document.getElementById('refresh-toast-link');
+        const openInNewTabBtn = document.getElementById('open-in-new-tab-btn');
+        const refreshIframeBtn = document.getElementById('refresh-iframe-btn');
+        const breadcrumbBar = document.getElementById('breadcrumb-bar');
+        const breadcrumbText = document.getElementById('breadcrumb-text');
+        const breadcrumbCloseBtn = document.getElementById('breadcrumb-close-btn');
+        const breadcrumbNewTabBtn = document.getElementById('breadcrumb-new-tab-btn');
+        
+        let currentIframeUrl = null;
+        let currentBreadcrumb = null;
+
+        /**
+         * Parses the stringified JSON value and constructs a Google Sheets URL.
+         */
+        function constructGSheetUrl(valueString) {
+            try {
+                if (!valueString) return '#';
+                const value = JSON.parse(valueString);
+
+                if (!value.gsheetId || typeof value.gid === 'undefined') {
+                    console.warn("Incomplete data for URL construction: gid is missing.", value);
+                    return '#';
+                }
+                
+                const baseUrl = `https://docs.google.com/spreadsheets/d/${value.gsheetId}/edit`;
+                let fragment = `#gid=${value.gid}`;
+                
+                return `${baseUrl}${fragment}`;
+            } catch (e) {
+                console.error('Error parsing value string:', valueString, e);
+                return '#';
+            }
+        }
+
+        /**
+         * Creates the HTML for a mega menu for a specific grade level.
+         */
+        function createMegaMenu(id, data) {
+            let columnsHtml = '';
+            const pathPrefix = [id];
+
+            data.forEach(kelas => {
+                let linksHtml = '';
+                const kelasPath = [...pathPrefix, kelas.label];
+
+                kelas.children.forEach(mapel => {
+                    const mapelPath = [...kelasPath, mapel.label];
+
+                    if ((mapel.label === 'Rekapitulasi' || mapel.label === 'Cetak Rapor') && mapel.children) {
+                        linksHtml += `<hr class="my-2 border-gray-200">`;
+                        mapel.children.forEach(sub => {
+                            const url = constructGSheetUrl(sub.value);
+                            const subPath = [...mapelPath, sub.label];
+                             linksHtml += `<a href="#" data-url="${url}" data-path="${subPath.join(' > ')}" class="nav-link flex w-full items-center justify-between rounded-md px-2 py-1 text-gray-600 hover:bg-atlantis-100 hover:text-black"><span>${sub.label}</span></a>`;
+                        });
+                    } else {
+                        const url = constructGSheetUrl(mapel.value);
+                        linksHtml += `<a href="#" data-url="${url}" data-path="${mapelPath.join(' > ')}" class="nav-link flex w-full items-center justify-between rounded-md px-2 py-1 text-gray-600 hover:bg-atlantis-100 hover:text-black"><span>${mapel.label}</span></a>`;
+                    }
+                });
+
+                columnsHtml += `
+                    <div class="px-2">
+                        <h4 class="font-semibold text-lg mb-2 text-gray-800">${kelas.label}</h4>
+                        <div class="space-y-1">${linksHtml}</div>
+                    </div>`;
+            });
+
+            return `
+                <div class="group static">
+                    <button class="px-4 py-4 text-white flex items-center group-hover:bg-atlantis-500 transition-colors duration-300">
+                        <span>${id}</span>
+                        <svg class="w-4 h-4 ml-1 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </button>
+                    <div class="absolute left-0 w-full bg-white shadow-lg hidden group-hover:block z-10">
+                        <div class="container mx-auto px-4 max-h-[80vh] overflow-y-auto">
+                            <div class="py-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">${columnsHtml}</div>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        /**
+         * Creates the HTML for the "Ekstrakurikuler" vertical dropdown menu.
+         */
+        function createVerticalMenu(id, data) {
+            let linksHtml = '';
+            const pathPrefix = [id];
+
+            data.forEach(kelas => {
+                 let subLinksHtml = '';
+                 const kelasPath = [...pathPrefix, kelas.label];
+
+                 if(kelas.children) {
+                    kelas.children.forEach(sub => {
+                        const url = constructGSheetUrl(sub.value);
+                        const subPath = [...kelasPath, sub.label];
+                        subLinksHtml += `<a href="#" data-url="${url}" data-path="${subPath.join(' > ')}" class="nav-link block px-4 py-1 text-sm text-gray-600 hover:bg-atlantis-100">${sub.label}</a>`;
+                    });
+                 }
+                linksHtml += `
+                    <div class="group/item relative">
+                        <a href="#" data-url="${constructGSheetUrl(kelas.value)}" data-path="${kelasPath.join(' > ')}" class="nav-link flex w-full items-center justify-between px-4 py-1 text-sm text-gray-700 hover:bg-atlantis-100">
+                            <span>${kelas.label}</span>
+                            ${kelas.children && kelas.children.length > 0 ? '<svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>' : ''}
+                        </a>
+                        <div class="absolute left-full -top-px -ml-px z-20 hidden w-32 rounded-md border bg-white shadow-lg group-hover/item:block">
+                            ${subLinksHtml}
+                        </div>
+                    </div>`;
+            });
+
+            return `
+                 <div class="group relative">
+                    <button class="px-4 py-4 text-white flex items-center group-hover:bg-atlantis-500 transition-colors duration-300">
+                        <span>${id}</span>
+                        <svg class="w-4 h-4 ml-1 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </button>
+                    <div class="absolute top-full right-0 w-56 bg-white rounded-md shadow-lg hidden group-hover:block z-20 border">
+                        <div class="py-1">${linksHtml}</div>
+                    </div>
+                </div>`;
+        }
+
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.remove('opacity-0');
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+            }, 3000); // Hide after 3 seconds
+        }
+
+        function showRefreshToast() {
+            refreshToast.classList.remove('hidden');
+            refreshToast.classList.remove('opacity-0');
+            setTimeout(() => {
+                refreshToast.classList.add('opacity-0');
+                // Use a second timeout to set display:none after the transition
+                setTimeout(() => refreshToast.classList.add('hidden'), 300);
+            }, 10000); // Hide after 10 seconds
+        }
+
+        function setLoaderState(state) {
+            if (state === 'loading') {
+                loader.innerHTML = `
+                    <svg class="animate-spin h-10 w-10 text-gray-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p class="text-lg">Loading Content...</p>`;
+            } 
+        }
+        
+        async function initializeApp() {
+            try {
+                const response = await fetch('https://web.insantaqwa.org/rapor/sd/nav.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const navData = await response.json();
+
+                if (!navData || typeof navData !== 'object' || !navData.dataMapel || !navData.dataEkskul) {
+                    throw new Error("Invalid or empty navigation data received from server.");
+                }
+                
+                const mapelData = navData.dataMapel;
+                const ekskulData = navData.dataEkskul;
+
+                const groupedByGrade = mapelData.reduce((acc, currentClass) => {
+                    const gradeNumberMatch = currentClass.label.match(/\d+/);
+                    if (!gradeNumberMatch) return acc;
+                    const gradeNumber = gradeNumberMatch[0];
+                    const gradeName = `Kelas ${gradeNumber}`;
+                    
+                    if (!acc[gradeName]) {
+                        acc[gradeName] = [];
+                    }
+                    acc[gradeName].push(currentClass);
+                    return acc;
+                }, {});
+
+                let navHtml = '';
+                const sortedGrades = Object.keys(groupedByGrade).sort((a, b) => {
+                    return parseInt(a.match(/\d+/)[0]) - parseInt(b.match(/\d+/)[0]);
+                });
+
+                sortedGrades.forEach(grade => {
+                    navHtml += createMegaMenu(grade, groupedByGrade[grade]);
+                });
+
+                navHtml += createVerticalMenu('Ekstrakurikuler', ekskulData);
+                navContainer.innerHTML = navHtml;
+                
+                loader.style.display = 'flex';
+                contentFrame.classList.add('hidden');
+                
+            } catch (error) {
+                navContainer.innerHTML = `<div class="text-red-400 p-4">Error: Failed to load navigation.</div>`;
+                console.error('Initialization failed:', error);
+                loader.style.display = 'none';
+            }
+        }
+        
+        navContainer.addEventListener('click', function(event) {
+            const navLink = event.target.closest('.nav-link');
+            if (navLink) {
+                event.preventDefault();
+                const url = navLink.dataset.url;
+                if (url && url !== '#') {
+                    currentIframeUrl = url;
+                    currentBreadcrumb = navLink.dataset.path;
+                    
+                    showToast(`Loading: ${currentBreadcrumb}`);
+                    setLoaderState('loading');
+                    loader.style.display = 'flex';
+                    contentFrame.classList.add('hidden');
+                    breadcrumbBar.classList.add('hidden');
+                    
+                    setTimeout(() => {
+                        contentFrame.src = url;
+                    }, 100);
+
+                    openInNewTabBtn.disabled = true;
+                    refreshIframeBtn.disabled = true;
+
+                    const allGroups = navContainer.querySelectorAll('.group, .group\\/item');
+                    
+                    allGroups.forEach(group => {
+                        if (group.classList.contains('group')) {
+                            group.classList.remove('group');
+                            group.classList.add('group-disabled-temp');
+                        }
+                        if (group.classList.contains('group/item')) {
+                            group.classList.remove('group/item');
+                            group.classList.add('group-item-disabled-temp');
+                        }
+                    });
+
+                    setTimeout(() => {
+                        navContainer.querySelectorAll('.group-disabled-temp, .group-item-disabled-temp').forEach(group => {
+                            if (group.classList.contains('group-disabled-temp')) {
+                                group.classList.remove('group-disabled-temp');
+                                group.classList.add('group');
+                            }
+                            if (group.classList.contains('group-item-disabled-temp')) {
+                                group.classList.remove('group-item-disabled-temp');
+                                group.classList.add('group/item');
+                            }
+                        });
+                    }, 1000);
+                }
+            }
+        });
+
+        contentFrame.addEventListener('load', function() {
+            loader.style.display = 'none';
+            contentFrame.classList.remove('hidden');
+            openInNewTabBtn.disabled = false;
+            refreshIframeBtn.disabled = false;
+
+            if (currentBreadcrumb) {
+                breadcrumbText.textContent = currentBreadcrumb;
+                breadcrumbBar.classList.remove('hidden');
+            }
+            showRefreshToast();
+        });
+
+        function refreshContent() {
+             if (currentIframeUrl) {
+                showToast('Refreshing content...');
+                contentFrame.src = currentIframeUrl;
+            }
+        }
+        
+        refreshIframeBtn.addEventListener('click', refreshContent);
+        refreshToastLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            refreshContent();
+            refreshToast.classList.add('opacity-0');
+            setTimeout(() => refreshToast.classList.add('hidden'), 300);
+        });
+
+        openInNewTabBtn.addEventListener('click', function() {
+            if (currentIframeUrl) {
+                window.open(currentIframeUrl, '_blank');
+            }
+        });
+
+        breadcrumbNewTabBtn.addEventListener('click', function() {
+            if (currentIframeUrl) {
+                window.open(currentIframeUrl, '_blank');
+            }
+        });
+
+        breadcrumbCloseBtn.addEventListener('click', function() {
+            breadcrumbBar.classList.add('hidden');
+        });
+
+        initializeApp();
+    });
+    </script>
+</body>
+</html>
+

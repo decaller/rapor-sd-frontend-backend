@@ -1,0 +1,16 @@
+---
+// RefreshToast.astro
+// Appears 10s after iframe loads — prompts user to refresh if content is blank
+---
+
+<div
+  id="refresh-toast"
+  class="fixed bottom-5 right-5 bg-atlantis-900 text-white py-3 px-5 rounded-lg shadow-lg opacity-0 transition-opacity duration-300 z-50 hidden"
+>
+  <p>
+    Tampilan kosong?
+    <a href="#" id="refresh-toast-link" class="underline hover:text-atlantis-300">
+      Refresh
+    </a>
+  </p>
+</div>

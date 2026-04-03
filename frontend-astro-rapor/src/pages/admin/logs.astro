@@ -1,0 +1,22 @@
+---
+// src/pages/admin/logs.astro
+import LogViewer from '../../components/LogViewer.astro';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>System Logs | Rapor SD</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-950 min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+      <h1 class="text-3xl font-bold text-white mb-8 text-center">Dashboard Admin</h1>
+      
+      <!-- Mount the Alpine.js Component -->
+      <LogViewer />
+      
+    </div>
+  </body>
+</html>

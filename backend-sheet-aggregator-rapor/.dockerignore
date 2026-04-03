@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log*
+*.sqlite
+*.db
+.env
+.env.*
+!.env.example
+*.log
+.git
+.gitignore
+dev guide
+google-service-account.json

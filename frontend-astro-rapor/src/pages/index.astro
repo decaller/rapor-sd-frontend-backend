@@ -1,0 +1,18 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import ContentArea from '../components/ContentArea.astro';
+import ToastNotification from '../components/ToastNotification.astro';
+import RefreshToast from '../components/RefreshToast.astro';
+import BreadcrumbBar from '../components/BreadcrumbBar.astro';
+---
+
+<Layout title="Rapor SD">
+  <Navbar />
+  <ContentArea />
+  <ToastNotification />
+  <RefreshToast />
+  <BreadcrumbBar />
+</Layout>
+
+<script src="../scripts/app.ts"></script>
