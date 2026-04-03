@@ -9,7 +9,7 @@ const {
 
 /**
  * The main orchestration function that pulls files from Google Drive,
- * parses the spreadsheet metadata, builds the nav tree, and uploads ODS files to FTP.
+ * parses the spreadsheet metadata, builds the nav tree, and backs up ODS files to Google Drive.
  */
 async function runSync() {
     try {

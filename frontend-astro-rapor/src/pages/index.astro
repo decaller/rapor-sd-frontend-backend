@@ -5,14 +5,20 @@ import ContentArea from '../components/ContentArea.astro';
 import ToastNotification from '../components/ToastNotification.astro';
 import RefreshToast from '../components/RefreshToast.astro';
 import BreadcrumbBar from '../components/BreadcrumbBar.astro';
+import SemesterModal from '../components/SemesterModal.astro';
+
+const navJsonUrl = import.meta.env.PUBLIC_NAV_URL || '/nav.json';
 ---
 
 <Layout title="Rapor SD">
-  <Navbar />
-  <ContentArea />
-  <ToastNotification />
-  <RefreshToast />
-  <BreadcrumbBar />
+  <div x-data="raporApp()" x-init="initApp('${navJsonUrl}')" class="flex flex-col min-h-screen">
+    <Navbar />
+    <ContentArea />
+    <ToastNotification />
+    <RefreshToast />
+    <BreadcrumbBar />
+    <SemesterModal />
+  </div>
 </Layout>
 
 <script src="../scripts/app.ts"></script>

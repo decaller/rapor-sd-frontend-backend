@@ -8,7 +8,7 @@ const { runSync } = require('../services/syncService');
 
 /**
  * Sync limiter: once per 5 minutes per IP.
- * The sync process is heavy (traverses Drive, calls Sheets API, uploads via FTP),
+ * The sync process is heavy (traverses Drive, calls Sheets API, backs up data to Google Drive),
  * so we enforce a strict cooldown to prevent accidental or abusive re-triggers.
  */
 const syncLimiter = rateLimit({

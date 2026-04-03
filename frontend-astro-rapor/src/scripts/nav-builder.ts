@@ -141,14 +141,9 @@ export function createVerticalMenu(id: string, data: any[]): string {
 // ─── Build Nav ────────────────────────────────────────────────────────────────
 
 /**
- * Builds and injects the navigation HTML for the selected period entry.
+ * Builds and returns the navigation HTML for the selected period entry.
  */
-export function buildNav(
-  entry: any,
-  navContainer: HTMLElement,
-  loader: HTMLElement,
-  contentFrame: HTMLIFrameElement
-): void {
+export function buildNav(entry: any): string {
   const mapelData: any[]  = entry.data.dataMapel  ?? [];
   const ekskulData: any[] = entry.data.dataEkskul ?? [];
 
@@ -176,7 +171,5 @@ export function buildNav(
     navHtml += createVerticalMenu('Ekstrakurikuler', ekskulData);
   }
 
-  navContainer.innerHTML = navHtml;
-  loader.style.display = 'flex';
-  contentFrame.classList.add('hidden');
+  return navHtml;
 }

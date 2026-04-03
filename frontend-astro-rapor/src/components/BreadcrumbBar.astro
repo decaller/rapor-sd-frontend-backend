@@ -4,17 +4,17 @@
 ---
 
 <div
-  id="breadcrumb-bar"
-  class="fixed bottom-5 left-5 bg-atlantis-800 text-white py-2 px-3 shadow-lg rounded-full z-40 hidden flex items-center justify-between transition-all duration-300"
+  x-show="currentBreadcrumb && !isLoading"
+  x-transition.opacity.duration.300ms
+  class="fixed bottom-5 left-5 bg-atlantis-800 text-white py-2 px-3 shadow-lg rounded-full z-40 flex items-center justify-between"
+  style="display: none;"
 >
-  <span id="breadcrumb-text" class="text-sm truncate ml-2 mr-4">
-    Path will be shown here...
-  </span>
+  <span class="text-sm truncate ml-2 mr-4" x-text="currentBreadcrumb"></span>
 
   <div class="flex items-center space-x-1 flex-shrink-0">
     <!-- Open in New Tab -->
     <button
-      id="breadcrumb-new-tab-btn"
+      @click="openNewTab"
       class="p-2 rounded-full hover:bg-atlantis-700 transition-colors duration-200"
       title="Open in New Tab"
     >
@@ -25,7 +25,7 @@
 
     <!-- Close Breadcrumb -->
     <button
-      id="breadcrumb-close-btn"
+      @click="closeBreadcrumb"
       class="p-2 rounded-full hover:bg-atlantis-700 transition-colors duration-200"
       title="Close"
     >

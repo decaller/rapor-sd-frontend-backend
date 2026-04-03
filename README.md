@@ -22,7 +22,7 @@ High-level flow:
 2. It reads spreadsheet metadata from Drive/Sheets.
 3. It compiles a `nav.json`-style tree and stores the latest version in SQLite.
 4. It exposes API endpoints for manual sync, status polling, and data retrieval.
-5. It uploads backup files to the configured SFTP/FTP server.
+5. It uploads backup files (ODS files and `nav.json`) to the configured Google Drive backup folder.
 
 ## Repository Layout
 
@@ -67,7 +67,7 @@ External dependencies:
 - Google Cloud project with Google Drive API and Google Sheets API enabled
 - Google service account JSON key
 - Access to the target Google Drive root folder
-- SFTP/FTP backup server credentials
+- A Google Drive folder ID for storing daily backups
 - Public DNS record for your production domain if using automatic TLS with Caddy
 
 ## Environment Variables
@@ -86,9 +86,7 @@ BACKEND_PORT=3000
 API_SECRET_KEY=replace_with_a_strong_random_secret_key
 ROOT_DRIVE_FOLDER=your_root_folder_id_here
 GOOGLE_APPLICATION_CREDENTIALS=/app/google-service-account.json
-SFTP_HOST=your.ftp.server.hostname
-SFTP_USER=your_ftp_username
-SFTP_PASS=your_ftp_password
+BACKUP_DRIVE_FOLDER=your_master_backup_folder_id_here
 ```
 
 Notes:
@@ -127,15 +125,13 @@ https://drive.google.com/drive/folders/1VFXen2Q4O9vRIMr--g6TTHvxrX1pNUIE
                                        This part is ROOT_DRIVE_FOLDER
 ```
 
-### SFTP/FTP Backup Credentials
+### Google Drive Backup Setup
 
-The backend expects:
+The backend requires a `BACKUP_DRIVE_FOLDER` environment variable.
 
-- `SFTP_HOST`
-- `SFTP_USER`
-- `SFTP_PASS`
-
-These values come from the server administrator or hosting provider. Validate them before first deployment if possible. The current implementation uses `basic-ftp`; confirm with your provider whether plain FTP, explicit FTPS, or another mode is expected before relying on production backups.
+1. Create a new folder in Google Drive to act as the master backup location.
+2. Share this folder with your service account email (from the step above) granting it **Editor** access so it can create daily subfolders and copy files.
+3. Copy the master backup folder ID from its URL and use it as your `BACKUP_DRIVE_FOLDER`.
 
 ## Running Locally
 
@@ -285,10 +281,9 @@ Current implementation model:
 
 1. `index.js` loads environment variables, initializes SQLite, registers cron jobs, and starts Express.
 2. `routes/api.js` exposes sync, status, and data endpoints with API-key protection and rate limiting.
-3. `services/syncService.js` performs the Drive traversal and output construction.
-4. `integrations/googleApi.js` handles Drive and Sheets calls using the service account key.
-5. `integrations/ftpService.js` handles file uploads to the backup server.
-6. `cron.js` schedules the nightly sync.
+3. `services/syncService.js` performs the Drive traversal and output construction, and handles backing up data to Google Drive.
+4. `integrations/googleApi.js` handles Drive and Sheets calls, including file copying for backups, using the service account key.
+5. `cron.js` schedules the nightly sync.
 
 Areas to pay attention to when extending the backend:
 
@@ -308,7 +303,7 @@ Use this after setup or deployment:
 5. Watch `/api/rapor/status` until the job completes or fails.
 6. Call `GET /api/rapor/data` and verify the payload matches the expected school year and semester structure.
 7. Confirm the SQLite database persists after a container restart.
-8. Confirm backup files arrive at the remote server if backup upload is enabled.
+8. Confirm backup files (ODS and nav.json) are successfully copied to daily subfolders within your Google Drive backup folder.
 
 ## Deployment With Portainer
 

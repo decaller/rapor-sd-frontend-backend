@@ -1,11 +1,13 @@
 ---
 // ToastNotification.astro
-// Auto-hiding toast shown when a nav link is clicked (disappears after 3s)
+// Auto-hiding toast shown when a nav link is clicked
 ---
 
 <div
-  id="toast-notification"
-  class="fixed bottom-5 right-5 bg-atlantis-900 text-white py-3 px-5 rounded-lg shadow-lg opacity-0 transition-opacity duration-300 z-50"
+  x-show="toastMessage !== ''"
+  x-transition.opacity.duration.300ms
+  class="fixed bottom-5 right-5 bg-atlantis-900 text-white py-3 px-5 rounded-lg shadow-lg z-50"
+  style="display: none;"
 >
-  <p>Loading link...</p>
+  <p x-text="toastMessage"></p>
 </div>
