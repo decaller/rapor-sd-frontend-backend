@@ -1,13 +1,13 @@
 # **Rapor Sync API (Node.js/Express)**
 
-This application replaces the previous n8n visual workflow ("Update Sheet Rapor") with a fast, concurrent Node.js microservice. It handles fetching Google Drive hierarchies, extracting Google Sheets metadata, backing up .ods files via SFTP, and generating a compiled JSON navigation tree for the frontend.
+This application replaces the previous n8n visual workflow ("Update Sheet Rapor") with a fast, concurrent Node.js microservice. It handles fetching Google Drive hierarchies, extracting Google Sheets metadata, backing up .ods files to Google Drive, and generating a compiled JSON navigation tree for the frontend.
 
 ## **🏗️ Architecture Stack**
 
 * **Framework:** Express.js (Lightweight API handling)  
 * **Google API:** googleapis (Service Account authentication)  
 * **Database/Logging:** SQLite \+ sqlite (In-memory/local state & debugging logs)  
-* **File Transfer:** basic-ftp (SFTP backups)  
+* **File Transfer:** Google Drive API (Backups)  
 * **Scheduling:** node-cron (Native nightly cron jobs)
 
 ## **🗺️ Logic Mapping (n8n \-\> Node.js)**
@@ -32,12 +32,12 @@ The API replicates and optimizes the n8n logic natively:
 ### **4\. Backups & Output**
 
 * **n8n Nodes:** FTP1/FTP2 \- Backup, FTP (nav.json upload).  
-* **Node Implementation:** basic-ftp runs concurrently using Promise.all() to download .ods files directly from Google Drive and stream them to the SFTP backup server. Finally, the generated nav.json tree is saved locally to SQLite and optionally pushed to the frontend via FTP.
+* **Node Implementation:** The process runs concurrently inside `syncService.js`. It copies .ods files directly within Google Drive to a designated backup folder. Finally, the generated nav.json tree is also saved to the backup folder on Google Drive and locally in SQLite.
 
 ## **📂 Project Structure**
 
 rapor-sync-api/  
-├── .env                          \# Environment variables (Ports, Folder IDs, FTP Creds)  
+├── .env                          \# Environment variables (Ports, Folder IDs, Google IDs)  
 ├── package.json                  \# Dependencies & scripts  
 ├── google-service-account.json   \# Google IAM Key (Keep Secret\!)  
 ├── database.js                   \# SQLite schema and logging helpers  
@@ -83,7 +83,7 @@ cron.schedule('0 2 \* \* \*', async () \=\> {
    mkdir rapor-sync-api  
    cd rapor-sync-api  
    npm init \-y  
-   npm install express googleapis cors dotenv sqlite3 sqlite basic-ftp node-cron  
+   npm install express googleapis cors dotenv sqlite3 sqlite node-cron  
    npm install \--save-dev nodemon
 
 2. **Google Service Account:**  
@@ -92,10 +92,8 @@ cron.schedule('0 2 \* \* \*', async () \=\> {
    * **Important:** Go to your root Drive folder (1VFXen2Q4O9vRIMr--g6TTHvxrX1pNUIE) and share it with the service account email (e.g., sync-bot@project.iam.gserviceaccount.com).  
 3. **Environment Setup (.env):**  
    PORT=3000  
-   SFTP\_HOST=web.insantaqwa.org  
-   SFTP\_USER=your\_username  
-   SFTP\_PASS=your\_password  
-   ROOT\_DRIVE\_FOLDER=1VFXen2Q4O9vRIMr--g6TTHvxrX1pNUIE
+   ROOT\_DRIVE\_FOLDER=1VFXen2Q4O9vRIMr--g6TTHvxrX1pNUIE  
+   BACKUP\_DRIVE\_FOLDER=your\_master\_backup\_folder\_id\_here
 
 4. **Run for Development:**  
    npm run dev

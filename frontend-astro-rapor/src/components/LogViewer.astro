@@ -4,54 +4,73 @@
 <div 
   x-data="logViewerComponent()" 
   x-init="init()"
-  class="bg-gray-900 rounded-lg shadow-lg p-6 max-w-4xl mx-auto text-gray-200 font-mono text-sm"
+  class="max-w-5xl mx-auto text-gray-300 font-mono text-xs sm:text-sm"
 >
-  <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-4">
-    <h2 class="text-xl font-bold text-white flex items-center gap-2">
-      <!-- Show spinner if syncing -->
-      <span x-show="isSyncing" class="animate-spin h-3 w-3 bg-blue-500 rounded-full inline-block"></span>
-      <span x-show="!isSyncing" class="h-3 w-3 bg-gray-500 rounded-full inline-block"></span>
-      System Sync Logs
-    </h2>
-    <button 
-      @click="triggerSync" 
-      :disabled="isSyncing"
-      class="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 text-white px-4 py-2 rounded transition-colors"
-      x-text="isSyncing ? 'Syncing...' : 'Force Sync'"
-    ></button>
+  <div class="flex justify-between items-center mb-6 border-b border-gray-800 pb-4">
+    <div class="flex items-center gap-3">
+      <div class="relative flex h-3 w-3">
+        <span x-show="isSyncing" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+        <span 
+          class="relative inline-flex rounded-full h-3 w-3"
+          :class="isSyncing ? 'bg-blue-500' : 'bg-gray-700'"
+        ></span>
+      </div>
+      <h2 class="text-lg font-medium text-white tracking-tight">System Logs</h2>
+    </div>
+    <div class="flex items-center gap-4">
+      <button 
+        @click="triggerSync" 
+        :disabled="isSyncing"
+        class="text-blue-400 hover:text-blue-300 disabled:text-gray-600 transition-colors uppercase text-xs font-bold tracking-widest flex items-center gap-2"
+      >
+        <span x-text="isSyncing ? 'Sync in Progress' : 'Execute Sync'"></span>
+        <svg x-show="!isSyncing" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+        </svg>
+      </button>
+    </div>
   </div>
 
   <!-- Log Container -->
-  <div class="space-y-2 max-h-[600px] overflow-y-auto">
+  <div class="space-y-1 overflow-y-auto pr-2 custom-scrollbar" style="max-height: calc(100vh - 200px);">
     <!-- Empty State -->
-    <div x-show="logs.length === 0" class="text-gray-500 italic text-center py-10" style="display: none;">
-      No recent sync logs found.
+    <div x-show="logs.length === 0" class="text-gray-600 italic py-10" style="display: none;">
+      // No log entries found.
     </div>
     
     <!-- Loop through logs -->
     <template x-for="log in logs" :key="log.id">
       <div 
-        class="p-3 rounded bg-gray-800 flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4 border-l-4"
+        class="py-1 flex items-start gap-3 border-l-2 pl-4 transition-colors hover:bg-white/5"
         :class="getBorderColor(log.status)"
       >
-        <div class="text-gray-500 whitespace-nowrap">
-          [<span x-text="formatTime(log.timestamp)"></span>]
+        <span class="text-gray-600 shrink-0 select-none" x-text="formatTime(log.timestamp)"></span>
+        <span class="font-bold shrink-0 min-w-[80px]" :class="getTextColor(log.status)" x-text="`[${log.status}]` "></span>
+        <div class="flex-1 min-w-0">
+          <span class="text-gray-400 font-bold" x-text="log.step_name"></span>
+          <span class="text-gray-500 mx-2">--</span>
+          <span class="text-gray-300 break-words" x-text="log.message"></span>
         </div>
-        
-        <div class="flex-1">
-          <strong class="text-gray-300" x-text="log.step_name"></strong>
-          <p class="mt-1" :class="getTextColor(log.status)" x-text="log.message"></p>
-        </div>
-
-        <div 
-          class="font-bold text-xs px-2 py-1 rounded bg-gray-900 uppercase tracking-wider" 
-          :class="getTextColor(log.status)"
-          x-text="log.status"
-        ></div>
       </div>
     </template>
   </div>
 </div>
+
+<style>
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #1f2937;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #374151;
+  }
+</style>
 
 <script is:inline>
   // Define the Alpine data component in global scope
@@ -76,7 +95,7 @@
 
       async fetchLogs() {
         try {
-          const res = await fetch('/api/proxy-logs');
+          const res = await fetch('/api/public-logs');
           if (res.ok) {
             this.logs = await res.json();
           }
@@ -89,12 +108,16 @@
         if (!confirm("Are you sure you want to force a background sync?")) return;
         
         try {
-           // Basic fetch proxy to trigger sync (Assuming you add this API proxy too later, or direct hit)
-           // alert("Sync triggered!");
-           // Optional: you can proxy to /api/rapor/sync using another file if needed
-           alert("Sync triggered!");
+           const res = await fetch('/api/public-sync', { method: 'POST' });
+           if (res.ok) {
+             alert("Sync triggered successfully.");
+             this.fetchLogs();
+           } else {
+             alert("Failed to trigger sync: " + res.statusText);
+           }
         } catch(e) {
-           console.error(e);
+           console.error("Sync error:", e);
+           alert("Error triggering sync.");
         }
       },
 

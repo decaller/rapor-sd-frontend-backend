@@ -61,7 +61,7 @@ Then edit `.env`:
 # Application
 PORT=3000
 
-# API Security — required in x-api-key header for all /api requests
+# API Security — required in x-api-key header or ?api_key query parameter for all /api requests
 API_SECRET_KEY=your_generated_secret_key_here
 
 # Google Drive
@@ -114,6 +114,8 @@ Once credentials are configured, trigger a sync manually:
 
 ```bash
 curl -X POST http://localhost:3000/api/rapor/sync
+# Or via browser:
+# http://localhost:3000/api/rapor/sync?api_key=YOUR_API_SECRET_KEY
 ```
 
 Then monitor the sync progress:

@@ -7,11 +7,12 @@ import RefreshToast from '../components/RefreshToast.astro';
 import BreadcrumbBar from '../components/BreadcrumbBar.astro';
 import SemesterModal from '../components/SemesterModal.astro';
 
-const navJsonUrl = import.meta.env.PUBLIC_NAV_URL || '/nav.json';
+const apiSecret = import.meta.env.API_SECRET_KEY || 'replace_with_a_strong_random_secret_key';
+const navJsonUrl = `/api/rapor/data?api_key=${apiSecret}`;
 ---
 
 <Layout title="Rapor SD">
-  <div x-data="raporApp()" x-init="initApp('${navJsonUrl}')" class="flex flex-col min-h-screen">
+  <div x-data="raporApp()" x-init={`initApp('${navJsonUrl}')`} class="flex flex-col min-h-screen">
     <Navbar />
     <ContentArea />
     <ToastNotification />

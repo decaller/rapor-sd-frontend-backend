@@ -49,6 +49,19 @@ async function getSpreadsheetMetadata(spreadsheetId) {
 }
 
 /**
+ * Reads raw cell values from a given range or sheet name.
+ * Returns a 2D array (rows x cols). First row is typically the header.
+ */
+async function getSheetValues(spreadsheetId, range) {
+    if (!sheets) throw new Error("Google API auth not initialized.");
+    const res = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range,
+    });
+    return res.data.values || [];
+}
+
+/**
  * Helper to download ODS export file as stream
  */
 async function getOdsExportStream(fileId) {
@@ -137,6 +150,7 @@ async function backupNavJsonToDrive(navTreeObject, dateFolderId) {
 module.exports = {
     getFolderContents,
     getSpreadsheetMetadata,
+    getSheetValues,
     getOdsExportStream,
     getOrCreateDateFolder,
     backupSheetToDrive,

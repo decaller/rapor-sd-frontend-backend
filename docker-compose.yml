@@ -12,10 +12,9 @@ services:
       DB_PATH: /app/database/database.sqlite
       API_SECRET_KEY: ${API_SECRET_KEY}
       ROOT_DRIVE_FOLDER: ${ROOT_DRIVE_FOLDER}
+      BACKUP_DRIVE_FOLDER: ${BACKUP_DRIVE_FOLDER}
       GOOGLE_APPLICATION_CREDENTIALS: /app/google-service-account.json
-      SFTP_HOST: ${SFTP_HOST}
-      SFTP_USER: ${SFTP_USER}
-      SFTP_PASS: ${SFTP_PASS}
+      RUN_SYNC_ON_STARTUP: "true"
     volumes:
       # Bind-mount the Google service account credentials (never baked into image)
       - ./backend-sheet-aggregator-rapor/google-service-account.json:/app/google-service-account.json:ro
@@ -61,6 +60,7 @@ services:
     environment:
       DOMAIN: ${DOMAIN:-localhost}
       BACKEND_PORT: ${BACKEND_PORT:-3000}
+      API_SECRET_KEY: ${API_SECRET_KEY}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

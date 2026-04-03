@@ -1,9 +1,10 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { initDB } = require('./database');
+const { initDB, getLatestNavTree } = require('./database');
 const apiRoutes = require('./routes/api');
 const { initCronJobs } = require('./cron');
+const { runSync } = require('./services/syncService');
 
 const app = express();
 app.use(cors());
@@ -20,7 +21,8 @@ if (!process.env.API_SECRET_KEY) {
 }
 
 const requireApiKey = (req, res, next) => {
-    const clientKey = req.headers['x-api-key'];
+    // Also check query string for easy browser testing: ?api_key=your_key
+    const clientKey = req.headers['x-api-key'] || req.query.api_key;
     if (!clientKey || clientKey !== process.env.API_SECRET_KEY) {
         return res.status(403).json({ error: 'Forbidden: Invalid or missing API Key.' });
     }
@@ -37,10 +39,18 @@ app.get('/', (req, res) => {
 });
 
 // Initialize DB then start server
-initDB().then(() => {
+initDB().then(async () => {
     initCronJobs();
-    app.listen(port, () => {
 
+    // Auto-run sync on first start if no data exists or if explicitly requested
+    const latestData = await getLatestNavTree();
+    if (!latestData || process.env.RUN_SYNC_ON_STARTUP === 'true') {
+        console.log("First time run detected (or RUN_SYNC_ON_STARTUP is true), starting initial sync...");
+        // Run asynchronously so we don't block the server startup
+        runSync().catch(err => console.error("Initial sync on startup failed:", err));
+    }
+
+    app.listen(port, () => {
         console.log(`Example app listening at http://localhost:${port}`);
     });
 }).catch(err => {

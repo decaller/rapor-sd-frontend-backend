@@ -2,179 +2,357 @@ const { logStep, saveNavTree } = require('../database');
 const { 
     getFolderContents, 
     getSpreadsheetMetadata, 
+    getSheetValues,
     getOrCreateDateFolder, 
     backupSheetToDrive, 
     backupNavJsonToDrive 
 } = require('../integrations/googleApi');
 
-/**
- * The main orchestration function that pulls files from Google Drive,
- * parses the spreadsheet metadata, builds the nav tree, and backs up ODS files to Google Drive.
- */
+// -----------------------------------------------------------------------
+//  Subject name mapping (mirrors the n8n Code node exactly)
+// -----------------------------------------------------------------------
+const SUBJECT_MAP = {
+    'PAI':  'Pendidikan Agama Islam',
+    'PP':   'Pendidikan Pancasila',
+    'BI':   'Bahasa Indonesia',
+    'MTK':  'Matematika',
+    'IPAS': 'Ilmu Pengetahuan Alam dan Sosial',
+    'PJOK': 'Pendidikan Jasmani Olahraga dan Kesehatan',
+    'SBY':  'Seni Budaya',
+    'BSU':  'Bahasa Sunda',
+    'BING': 'Bahasa Inggris',
+    'TIK':  'Teknologi Informasi dan Komunikasi',
+    'BAR':  'Bahasa Arab',
+    'FQH':  'Fikih',
+    'HDS':  'Hadis',
+};
+
+// -----------------------------------------------------------------------
+//  scanSheetForSubclasses
+//  Reads column A of a given sheet and finds rows that contain subclass
+//  labels like "1A", "2B", "Kelas 3C", etc.
+//
+//  Returns: { "1A": 4, "1B": 32, "2A": 115, ... }  (1-based row numbers)
+// -----------------------------------------------------------------------
+async function scanSheetForSubclasses(gsheetId, sheetTitle) {
+    const values = await getSheetValues(gsheetId, `${sheetTitle}!A:A`);
+    const result = {};
+
+    values.forEach((row, idx) => {
+        const cell = (row[0] || '').toString().trim();
+        // Match plain "1A" or prefixed "Kelas 1A" / "KELAS 2B" etc.
+        const match = cell.match(/^(?:kelas\s+)?(\d+[A-Z])$/i);
+        if (match) {
+            const key = match[1].toUpperCase(); // normalise to "1A"
+            if (result[key] === undefined) {
+                result[key] = idx + 1; // convert 0-based index to 1-based row
+            }
+        }
+    });
+
+    return result;
+}
+
+// -----------------------------------------------------------------------
+//  buildMapelNode
+//  Turns one class spreadsheet ("Nilai Mapel Kelas 1A") into a nav node.
+//  Label is derived from the file name by stripping common prefixes.
+// -----------------------------------------------------------------------
+async function buildMapelNode(spreadsheetFile) {
+    const gsheetId = spreadsheetFile.id;
+
+    // "Nilai Mapel Kelas 1A" → "Kelas 1A"
+    const label = spreadsheetFile.name
+        .replace(/^Nilai\s+Mapel\s+/i, '')
+        .replace(/^Nilai\s+/i, '')
+        .trim();
+
+    const kelasNode = { label, children: [] };
+
+    const subjectChildren = [];
+    const rekapChildren   = [];
+    const cetakChildren   = [];
+    const coverChildren   = [];
+    const biodataChildren = [];
+
+    const sheetsData = await getSpreadsheetMetadata(gsheetId);
+
+    for (const sheet of sheetsData) {
+        const sheetName = sheet.title;
+        const gid       = sheet.sheetId;
+        const valueObj  = JSON.stringify({ gsheetId, gid });
+        const upper     = sheetName.toUpperCase();
+        const lower     = sheetName.toLowerCase();
+
+        if (SUBJECT_MAP[upper]) {
+            subjectChildren.push({ label: SUBJECT_MAP[upper], value: valueObj });
+
+        } else if (lower.startsWith('rekap') || lower.includes('ledger')) {
+            // "Rekap STS" → "Ledger STS"
+            const suffix = sheetName.replace(/^rekap\s*/i, '').trim();
+            rekapChildren.push({ label: suffix ? `Ledger ${suffix}` : 'Ledger', value: valueObj });
+
+        } else if (lower.startsWith('cetak')) {
+            cetakChildren.push({ label: sheetName, value: valueObj });
+
+        } else if (lower.startsWith('cover')) {
+            coverChildren.push({ label: sheetName, value: valueObj });
+
+        } else if (lower.startsWith('biodata')) {
+            biodataChildren.push({ label: sheetName, value: valueObj });
+        }
+        // Skip: 'setup' and unknown utility sheets
+    }
+
+    kelasNode.children.push(...subjectChildren);
+    if (rekapChildren.length   > 0) kelasNode.children.push({ label: 'Rekapitulasi', children: rekapChildren });
+    if (cetakChildren.length   > 0) kelasNode.children.push({ label: 'Cetak Rapor',  children: cetakChildren });
+    if (coverChildren.length   > 0) kelasNode.children.push({ label: 'Cover',        children: coverChildren });
+    if (biodataChildren.length > 0) kelasNode.children.push({ label: 'Biodata',      children: biodataChildren });
+
+    return kelasNode;
+}
+
+// -----------------------------------------------------------------------
+//  buildEkskulNodes
+//  Reads one Ekskul spreadsheet and builds the Kelas > SubKelas tree.
+//
+//  Strategy:
+//   1. Detect Level sheet and Nilai sheet by tab name
+//   2. Scan column A of EACH sheet to find subclass label rows
+//   3. Per subclass:
+//        - found in BOTH  → { valueLevel, valueNilai }
+//        - found in Level only → { value }  (using levelGid)
+//        - found in Nilai only → { value }  (using nilaiGid, rare edge-case)
+//   4. Group children by grade number → Kelas 1, Kelas 2, …
+// -----------------------------------------------------------------------
+async function buildEkskulNodes(ekskulFile) {
+    const gsheetId  = ekskulFile.id;
+    const allSheets = await getSpreadsheetMetadata(gsheetId);
+
+    // --- Find Level and Nilai sheet entries --------------------------------
+    let levelSheet = null;
+    let nilaiSheet = null;
+
+    for (const s of allSheets) {
+        const lower = s.title.toLowerCase();
+        if (lower.includes('level') && !levelSheet) levelSheet = s;
+        else if (lower.includes('nilai') && !nilaiSheet) nilaiSheet = s;
+    }
+
+    // Fallback: first non-SETUP sheet becomes Level if no named match
+    if (!levelSheet) {
+        levelSheet = allSheets.find(s => s.title.toLowerCase() !== 'setup') || null;
+    }
+
+    if (!levelSheet) {
+        console.warn(`⚠️ No usable Level sheet in "${ekskulFile.name}". Skipping.`);
+        return [];
+    }
+
+    // Whether ALL subclasses get dual values depends on BOTH tabs being present.
+    // If only Level tab exists → all children use simple "value".
+    // If both Level AND Nilai tabs exist → all children use "valueLevel" + "valueNilai".
+    const hasBothSheets = nilaiSheet !== null;
+
+    // --- Scan each available sheet for subclass row markers ----------------
+    console.log(`🔍 Scanning Level sheet "${levelSheet.title}" in ${ekskulFile.name}...`);
+    const levelMap = await scanSheetForSubclasses(gsheetId, levelSheet.title);
+
+    let nilaiMap = {};
+    if (hasBothSheets) {
+        console.log(`🔍 Scanning Nilai sheet "${nilaiSheet.title}" in ${ekskulFile.name}...`);
+        nilaiMap = await scanSheetForSubclasses(gsheetId, nilaiSheet.title);
+    }
+
+    if (Object.keys(levelMap).length === 0) {
+        console.warn(`⚠️ No subclass labels found in Level sheet of "${ekskulFile.name}". Skipping.`);
+        return [];
+    }
+
+    // --- Build subclass nodes grouped by grade ----------------------------
+    // Primary source is the Level sheet. Nilai sheet provides its own row map
+    // (rows may differ between tabs, so each tab is scanned independently).
+    const classGroups = {}; // { "1": [ node, … ], "2": [ … ] }
+
+    const sortedSubs = Object.keys(levelMap).sort((a, b) =>
+        a.localeCompare(b, 'id', { numeric: true })
+    );
+
+    for (const sub of sortedSubs) {
+        const grade    = sub.charAt(0);
+        if (!classGroups[grade]) classGroups[grade] = [];
+
+        let node;
+        if (hasBothSheets) {
+            // Use the row found in each respective sheet.
+            // If a subclass is missing from Nilai sheet, fall back to Level row.
+            const nilaiRow = nilaiMap[sub] ?? levelMap[sub];
+
+            node = {
+                label:      sub,
+                valueLevel: JSON.stringify({ gsheetId, gid: levelSheet.sheetId, range: `A${levelMap[sub]}` }),
+                valueNilai: JSON.stringify({ gsheetId, gid: nilaiSheet.sheetId, range: `A${nilaiRow}` }),
+            };
+        } else {
+            node = {
+                label: sub,
+                value: JSON.stringify({ gsheetId, gid: levelSheet.sheetId, range: `A${levelMap[sub]}` }),
+            };
+        }
+
+        classGroups[grade].push(node);
+    }
+
+    // --- Build Kelas group nodes -------------------------------------------
+    const nodes        = [];
+    const sortedGrades = Object.keys(classGroups).sort((a, b) => Number(a) - Number(b));
+
+    for (const grade of sortedGrades) {
+        nodes.push({
+            label:    `Kelas ${grade}`,
+            value:    JSON.stringify({ gsheetId, gid: levelSheet.sheetId }),
+            children: classGroups[grade],
+        });
+    }
+
+    return nodes;
+}
+
+// -----------------------------------------------------------------------
+//  runSync  –  Main orchestration
+// -----------------------------------------------------------------------
 async function runSync() {
     try {
         await logStep('SYNC_START', 'PENDING', 'Started the synchronization process.');
 
         const rootFolderId = process.env.ROOT_DRIVE_FOLDER;
-        if (!rootFolderId) throw new Error("ROOT_DRIVE_FOLDER is not set in .env");
+        if (!rootFolderId) throw new Error('ROOT_DRIVE_FOLDER is not set in .env');
 
         await logStep('DRIVE_TRAVERSAL', 'PENDING', 'Traversing Google Drive folders...');
-        
-        // 1. Fetch Tahun Ajaran folders
+
         const tahunAjaranFolders = await getFolderContents(rootFolderId);
-        const finalData = [];
-        const processedSheets = []; // To track all spreadsheets for backup
+        const finalData          = [];
+        const processedSheets    = [];
 
         for (const ta of tahunAjaranFolders) {
-            // Check if it's a folder (mimeType google.apps.folder)
             if (ta.mimeType !== 'application/vnd.google-apps.folder') continue;
 
             const semesterFolders = await getFolderContents(ta.id);
+
             for (const sem of semesterFolders) {
                 if (sem.mimeType !== 'application/vnd.google-apps.folder') continue;
-                
-                // Parse semester number (e.g. "Semester 1" -> 1)
-                const semMatch = sem.name.match(/\d+/);
+
+                const semMatch    = sem.name.match(/\d+/);
                 const semesterNum = semMatch ? parseInt(semMatch[0], 10) : 1;
 
                 const semesterData = {
                     tahunAjaran: ta.name,
-                    semester: semesterNum,
-                    data: {
-                        dataMapel: [],
-                        dataEkskul: []
-                    }
+                    semester:    semesterNum,
+                    data: { dataMapel: [], dataEkskul: [] },
                 };
 
-                // Traverse inside Semester folder to get Ekskul and Mapel classes
-                const classFilesAndFolders = await getFolderContents(sem.id);
-                
-                for (const item of classFilesAndFolders) {
-                    if (item.name.includes('Ekskul') || item.name.includes('Ekstrakurikuler')) {
-                        // Handle Ekskul Spreadsheets
-                        await logStep('PROCESS_EKSKUL', 'PENDING', `Processing Ekskul for ${ta.name} Sem ${semesterNum}`);
-                        
+                const semesterContents = await getFolderContents(sem.id);
+
+                for (const item of semesterContents) {
+                    const nameLower = item.name.toLowerCase();
+
+                    // ── EKSKUL: spreadsheets whose name contains "eks" ──────
+                    if (
+                        item.mimeType === 'application/vnd.google-apps.spreadsheet' &&
+                        (nameLower.includes('ekskul') ||
+                         nameLower.includes('ekstrakurikuler') ||
+                         nameLower.startsWith('eks'))
+                    ) {
+                        await logStep('PROCESS_EKSKUL', 'PENDING',
+                            `Processing Ekskul: ${item.name} (${ta.name} Sem ${semesterNum})`);
+
                         processedSheets.push({ id: item.id, name: item.name });
-                        
-                        // Data Ekskul Logic (Scaffolding dynamic row range from SETUP sheet)
-                        // Fixed GID is required for backend routing (1676084899)
-                        const ekskulNode = {
-                            label: "Kelas 1", // Assuming root grouping
-                            value: JSON.stringify({ gsheetId: item.id, gid: 1676084899 }),
-                            children: [
-                                {
-                                    label: "1A",
-                                    valueLevel: JSON.stringify({ gsheetId: item.id, gid: 1676084899, range: "A4" }),
-                                    valueNilai: JSON.stringify({ gsheetId: item.id, gid: 1676084899, range: "A4" })
-                                },
-                                {
-                                    label: "1B",
-                                    valueLevel: JSON.stringify({ gsheetId: item.id, gid: 1676084899, range: "A32" }),
-                                    valueNilai: JSON.stringify({ gsheetId: item.id, gid: 1676084899, range: "A32" })
-                                }
-                            ]
-                        };
-                        semesterData.data.dataEkskul.push(ekskulNode);
-                        
+
+                        try {
+                            const ekskulNodes = await buildEkskulNodes(item);
+                            semesterData.data.dataEkskul.push(...ekskulNodes);
+                        } catch (e) {
+                            console.error(`❌ Ekskul "${item.name}" failed:`, e.message);
+                        }
+
+                    // ── CLASS FOLDER: contains per-class spreadsheets ───────
                     } else if (item.mimeType === 'application/vnd.google-apps.folder') {
-                        // Handle Mapel Folders (e.g., "Kelas 1", "Kelas 2") 
-                        await logStep('PROCESS_MAPEL', 'PENDING', `Processing Mapel for ${item.name}`);
+                        await logStep('PROCESS_MAPEL', 'PENDING',
+                            `Processing class folder: ${item.name} (${ta.name} Sem ${semesterNum})`);
 
-                        const mapelFiles = await getFolderContents(item.id);
-                        
-                        const kelasNode = {
-                            label: item.name, // e.g. "Kelas 1A"
-                            children: []
-                        };
+                        const classFiles = await getFolderContents(item.id);
+                        // Sort alphabetically so order is 1A, 1B, 1C …
+                        classFiles.sort((a, b) => a.name.localeCompare(b.name));
 
-                        const rekapChildren = [];
-                        const cetakChildren = [];
-                        const coverChildren = [];
-                        
-                        for (const childFile of mapelFiles) {
-                            if (childFile.mimeType !== 'application/vnd.google-apps.spreadsheet') continue;
-                            
-                            processedSheets.push({ id: childFile.id, name: childFile.name });
-                            
-                            // Mapel Branch Logic: Fetching sheets properties
-                            const sheetsData = await getSpreadsheetMetadata(childFile.id);
-                            
-                            for (const sheet of sheetsData) {
-                                const sheetName = sheet.title;
-                                const gid = sheet.sheetId;
-                                const valueObj = JSON.stringify({ gsheetId: childFile.id, gid: gid });
-                                const lowerName = sheetName.toLowerCase();
-                                
-                                if (lowerName.includes('rekap') || lowerName.includes('ledger')) {
-                                    rekapChildren.push({ label: sheetName, value: valueObj });
-                                } else if (lowerName.includes('cetak')) {
-                                    cetakChildren.push({ label: sheetName, value: valueObj });
-                                } else if (lowerName.includes('cover') || lowerName.includes('bio')) {
-                                    coverChildren.push({ label: sheetName, value: valueObj });
-                                } else if (lowerName !== 'setup') {
-                                    // Expand standard abbreviations mapping
-                                    let expandedName = sheetName;
-                                    if (lowerName === 'pai') expandedName = 'Pendidikan Agama Islam';
-                                    if (lowerName === 'pp') expandedName = 'Pendidikan Pancasila';
-                                    if (lowerName === 'mtk') expandedName = 'Matematika';
-                                    
-                                    kelasNode.children.push({ label: expandedName, value: valueObj });
-                                }
+                        for (const cf of classFiles) {
+                            if (cf.mimeType !== 'application/vnd.google-apps.spreadsheet') continue;
+                            // Skip any Ekskul file that happens to live inside a folder
+                            if (cf.name.toLowerCase().includes('eks')) continue;
+
+                            processedSheets.push({ id: cf.id, name: cf.name });
+                            try {
+                                semesterData.data.dataMapel.push(await buildMapelNode(cf));
+                            } catch (e) {
+                                console.error(`❌ Mapel "${cf.name}" failed:`, e.message);
                             }
                         }
 
-                        if (rekapChildren.length > 0) kelasNode.children.push({ label: "Rekapitulasi", children: rekapChildren });
-                        if (cetakChildren.length > 0) kelasNode.children.push({ label: "Cetak Rapor", children: cetakChildren });
-                        if (coverChildren.length > 0) kelasNode.children.push({ label: "Cover", children: coverChildren });
+                    // ── CLASS SPREADSHEET directly in Semester folder ───────
+                    // (Handles flat Drive structure without group sub-folders)
+                    } else if (item.mimeType === 'application/vnd.google-apps.spreadsheet') {
+                        await logStep('PROCESS_MAPEL', 'PENDING',
+                            `Processing class spreadsheet: ${item.name}`);
 
-                        semesterData.data.dataMapel.push(kelasNode);
+                        processedSheets.push({ id: item.id, name: item.name });
+                        try {
+                            semesterData.data.dataMapel.push(await buildMapelNode(item));
+                        } catch (e) {
+                            console.error(`❌ Mapel "${item.name}" failed:`, e.message);
+                        }
                     }
                 }
+
+                // Sort dataMapel by label ("Kelas 1A" < "Kelas 1B" < "Kelas 2A" …)
+                semesterData.data.dataMapel.sort((a, b) =>
+                    a.label.localeCompare(b.label, 'id', { numeric: true })
+                );
 
                 finalData.push(semesterData);
             }
         }
 
-        const finalJson = {
-            title: "Rapor SD",
-            data: finalData
-        };
-        
-        await logStep('DB_SAVE', 'PENDING', 'Saving final JSON navigation tree to database.');
+        const finalJson = { title: 'Rapor SD', data: finalData };
+
+        await logStep('DB_SAVE', 'PENDING', 'Saving nav tree to database.');
         await saveNavTree(finalJson);
-        
-        // --- BACKUP PROCESS ---
+
+        // ── BACKUP ──────────────────────────────────────────────────────────
         try {
             const backupFolderId = process.env.BACKUP_DRIVE_FOLDER;
             if (backupFolderId) {
                 await logStep('BACKUP_START', 'PENDING', 'Starting Google Drive backup...');
-                
-                // 1. Get or create today's backup folder
                 const dateFolderId = await getOrCreateDateFolder(backupFolderId);
-                
-                // 2. Backup all processed sheets concurrently
-                console.log(`📦 Copying ${processedSheets.length} sheets to backup folder...`);
-                const copyPromises = processedSheets.map(sheet => 
-                    backupSheetToDrive(sheet.id, sheet.name, dateFolderId)
-                );
-                await Promise.all(copyPromises);
 
-                // 3. Backup the final nav.json
+                console.log(`📦 Copying ${processedSheets.length} sheets to backup folder...`);
+                await Promise.all(
+                    processedSheets.map(s => backupSheetToDrive(s.id, s.name, dateFolderId))
+                );
                 await backupNavJsonToDrive(finalJson, dateFolderId);
-                
-                await logStep('BACKUP_COMPLETE', 'SUCCESS', 'Backup to Google Drive finished successfully.');
+
+                await logStep('BACKUP_COMPLETE', 'SUCCESS', 'Backup finished.');
             } else {
-                console.warn("⚠️ BACKUP_DRIVE_FOLDER not set. Skipping backup.");
+                console.warn('⚠️ BACKUP_DRIVE_FOLDER not set. Skipping backup.');
             }
-        } catch (backupError) {
-            console.error("❌ Backup process failed:", backupError);
-            await logStep('BACKUP_ERROR', 'ERROR', backupError.message);
+        } catch (backupErr) {
+            console.error('❌ Backup failed:', backupErr);
+            await logStep('BACKUP_ERROR', 'ERROR', backupErr.message);
         }
-        
+
         await logStep('SYNC_COMPLETE', 'SUCCESS', 'Synchronization finished successfully.');
 
     } catch (error) {
-        console.error("Sync process failed:", error);
+        console.error('Sync process failed:', error);
         await logStep('SYNC_ERROR', 'ERROR', error.message);
     }
 }

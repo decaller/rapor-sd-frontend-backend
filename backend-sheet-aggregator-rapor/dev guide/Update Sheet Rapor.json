@@ -1,0 +1,1338 @@
+{
+  "name": "Update Sheet Rapor",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "SETUP",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10uIny-dFcXSUYnastqPXz4d8dGR26XyLMj9SIZPqA68/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1824,
+        -480
+      ],
+      "id": "4c513ec3-ea8e-4175-a0ff-78d2d49ebb33",
+      "name": "Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "FPssm5pXXCbCrprq",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f3248631-93bb-4434-bc07-26ee39a13732",
+              "leftValue": "={{ $json.row_number }}",
+              "rightValue": 7,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "f00777bc-fd49-45ef-adf4-401ae7af82bc",
+              "leftValue": "={{ $json.row_number }}",
+              "rightValue": 13,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            },
+            {
+              "id": "c8c94555-59c8-4bf5-b290-cfc080802225",
+              "leftValue": "={{ $json.col_7 }}",
+              "rightValue": "#N/A",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        2048,
+        -480
+      ],
+      "id": "4dab76e8-3436-43d9-bef6-f2479625b0a7",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        656,
+        0
+      ],
+      "id": "a51bce46-f765-487b-b182-7718db89184f",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "BarisKelas",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2480,
+        -480
+      ],
+      "id": "bad5eadc-4858-450d-933b-d922d1e06d68",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        2704,
+        -384
+      ],
+      "id": "3d33791e-6677-4b0e-8b10-9cc89c043786",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfec1da6-e458-4316-b28c-717eebb0d1aa",
+              "name": "SubKelas",
+              "value": "={{ $json.col_6 }}",
+              "type": "string"
+            },
+            {
+              "id": "d5f64a6e-4b3d-4df9-81d7-2ef6dc3a3799",
+              "name": "BarisKe",
+              "value": "={{ $json.col_7 }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2272,
+        -480
+      ],
+      "id": "31f640e1-8fd7-4653-9716-68e51ec4685e",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "sheets",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        208
+      ],
+      "id": "c3e93519-ab46-4734-96ee-bd84c0a45ead",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a64ae156-ff14-4c60-a0ea-7c47ed058342",
+              "name": "NamaSheet",
+              "value": "={{ $json.properties.title }}",
+              "type": "string"
+            },
+            {
+              "id": "ea79f924-085f-49c0-9394-6a5c2849f3ce",
+              "name": "SheetId",
+              "value": "={{ $json.properties.sheetId }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2080,
+        208
+      ],
+      "id": "004a21fc-3d70-4d14-b6e8-01b3a7fe39d1",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "SheetId",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2288,
+        208
+      ],
+      "id": "f40e63a9-acbe-4fdc-87f8-294a511582d8",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2928,
+        -384
+      ],
+      "id": "f2fc15cc-c21a-4793-8455-37bf32095741",
+      "name": "Aggregate2"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        512
+      ],
+      "id": "4a6e9353-1054-4012-ad36-25aa7d14328c",
+      "name": "Aggregate3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cb865b40-e060-4c54-ab1a-00a8630fd7d8",
+              "name": "GsheetId",
+              "value": "={{ $('Loop Over Items').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "91dda64d-73a4-422c-92c4-db14267ef675",
+              "name": "Name",
+              "value": "={{ $('Loop Over Items').item.json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "104f33bc-90a2-430f-8052-9ffa9848151f",
+              "name": "SheetId",
+              "value": "={{ $json.SheetId }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2960,
+        288
+      ],
+      "id": "cd7d2974-9e93-4da8-b8ae-0fff0a5fab5a",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Define the mapping from sheet name abbreviations to full subject names\nconst subjectMap = {\n    'PAI': 'Pendidikan Agama Islam',\n    'PP': 'Pendidikan Pancasila',\n    'BI': 'Bahasa Indonesia',\n    'MTK': 'Matematika',\n    'IPAS': 'Ilmu Pengetahuan Alam dan Sosial',\n    'PJOK': 'Pendidikan Jasmani Olahraga dan Kesehatan',\n    'SBY': 'Seni Budaya',\n    'BSU': 'Bahasa Sunda',\n    'BING': 'Bahasa Inggris',\n    'TIK': 'Teknologi Informasi dan Komunikasi',\n    'BAR': 'Bahasa Arab',\n    'FQH': 'Fikih',\n    'HDS': 'Hadis'\n};\n\n/**\n * Converts the input JSON data into a hierarchical tree structure.\n * @param {Array} data The input data from the n8n node.\n * @returns {Array} The transformed tree data.\n */\nfunction convertToTreeData(data) {\n    const tree = [];\n    const parsedData = data[0].json.data.reverse();\n\n    parsedData.forEach(classData => {\n        const gsheetId = classData.GsheetId;\n        const className = classData.Name;\n        const sheetIds = classData.SheetId;\n\n        if (!className || !sheetIds) {\n            return;\n        }\n\n        const classNode = {\n            label: className.replace(\"Nilai Mapel \", \"\"), // \"Nilai Mapel Kelas 6D\" -> \"Kelas 6D\"\n            children: []\n        };\n\n        const subjectChildren = [];\n        const rekapNode = { label: 'Rekapitulasi', children: [] };\n        const cetakNode = { label: 'Cetak Rapor', children: [] };\n        const coverNode = { label: 'Cover', children: [] };\n        const biodataNode = { label: 'Biodata', children: [] };\n\n        sheetIds.forEach(sheet => {\n            const fullSubjectName = subjectMap[sheet.NamaSheet];\n            const sheetNameLower = sheet.NamaSheet.toLowerCase(); // For case-insensitive matching\n\n            if (fullSubjectName) {\n                subjectChildren.push({\n                    label: fullSubjectName,\n                    value: JSON.stringify({ gsheetId, gid: sheet.SheetId })\n                });\n\n            } else if (sheetNameLower.startsWith('rekap')) {\n                rekapNode.children.push({\n                    label: 'Ledger '+sheet.NamaSheet.substring(6,100),\n                    value: JSON.stringify({ gsheetId, gid: sheet.SheetId })\n                });\n\n            } else if (sheetNameLower.startsWith('cetak')) {\n                cetakNode.children.push({\n                    label: sheet.NamaSheet,\n                    value: JSON.stringify({ gsheetId, gid: sheet.SheetId })\n                });\n                \n            } else if (sheetNameLower.startsWith('cover')) {\n                coverNode.children.push({\n                    label: sheet.NamaSheet,\n                    value: JSON.stringify({ gsheetId, gid: sheet.SheetId })\n                });\n\n            } else if (sheetNameLower.startsWith('biodata')) {\n                biodataNode.children.push({\n                    label: sheet.NamaSheet,\n                    value: JSON.stringify({ gsheetId, gid: sheet.SheetId })\n                });\n            }\n        });\n\n        // Add the categorized groups to the main class node\n        classNode.children.push(...subjectChildren);\n        \n        if (rekapNode.children.length > 0) {\n            classNode.children.push(rekapNode);\n        }\n        if (cetakNode.children.length > 0) {\n            classNode.children.push(cetakNode);\n        }\n        \n        // --- UPDATED: Cover and Biodata are now placed at the end ---\n        if (coverNode.children.length > 0) {\n            classNode.children.push(coverNode);\n        }\n        if (biodataNode.children.length > 0) {\n            classNode.children.push(biodataNode);\n        }\n\n        tree.push(classNode);\n    });\n\n    return tree;\n}\n\n// In n8n, use the input from the previous node.\nconst inputData = items.map(item => ({ json: item.json }));\nreturn convertToTreeData(inputData);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        512
+      ],
+      "id": "2a5e9f15-319f-4655-a13d-9194b08cb0e6",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "mode": "each",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        3344,
+        528
+      ],
+      "id": "12f77819-5158-44bd-bff7-4756c21dea79",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "SETUP",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        688
+      ],
+      "id": "a0e4134e-a80b-4989-ac11-63b23a66f8a9",
+      "name": "Google Sheets1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "FPssm5pXXCbCrprq",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "79295d8c-3204-411b-97d9-6df1e259c8a0",
+              "leftValue": "={{ $json.col_1 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        688,
+        688
+      ],
+      "id": "de1d8aec-62d3-4f4b-9ba0-ba42f5e74628",
+      "name": "Filter1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1506dbd-3f34-436e-a6c0-87c2679f7a40",
+              "name": "SubKelas",
+              "value": "={{ $json.col_1 }}",
+              "type": "string"
+            },
+            {
+              "id": "6d2e3bb1-0688-4c9f-a4cc-81d64cc695f9",
+              "name": "BarisKe",
+              "value": "={{ $json['Link GSheet Data Siswa'] }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        912,
+        688
+      ],
+      "id": "3c35087c-33c4-4849-b758-4312bcb64da1",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1bbaaa8e-c2c8-41d3-92da-d2bfa85b8a9a",
+              "name": "GsheetId",
+              "value": "={{ $('get Ekskul').item.json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1360,
+        688
+      ],
+      "id": "e8c8e8d8-180d-4a3c-a590-58c3a7894da1",
+      "name": "Edit Fields4"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1136,
+        688
+      ],
+      "id": "2017f529-0407-4eb1-afc7-9946aef931e3",
+      "name": "Aggregate4"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Converts the new, simpler data structure into a hierarchical tree.\n * The structure will be: Kelas > SubKelas.\n * All nodes are now clickable and include a fixed GID.\n * @param {Array} data The input data from the n8n node.\n * @returns {Array} The transformed tree data.\n */\nfunction convertNewDataToTree(data) {\n    const input = data[0].json;\n    const gsheetId = input.GsheetId;\n    const subClassList = input.data;\n    const fixedGid = 1676084899; // ✨ Your fixed GID\n\n    // Use an object to group subclasses by their main class number (1, 2, 3, etc.)\n    const classGroups = {};\n\n    // 1. Group all subclasses by their grade level\n    subClassList.forEach(subClass => {\n        const classNumber = subClass.SubKelas.charAt(0);\n\n        if (!classGroups[classNumber]) {\n            classGroups[classNumber] = [];\n        }\n\n        // Create the node for the specific subclass\n        const subClassNode = {\n            label: subClass.SubKelas,\n            value: JSON.stringify({\n                gsheetId: gsheetId,\n                gid: fixedGid, // ✨ GID added here\n                range: 'A' + subClass.BarisKe\n            })\n        };\n\n        classGroups[classNumber].push(subClassNode);\n    });\n\n    // 2. Convert the grouped object into the final array structure\n    const tree = [];\n    const sortedClassNumbers = Object.keys(classGroups).sort((a, b) => a - b);\n\n    for (const classNumber of sortedClassNumbers) {\n        const classNode = {\n            label: \"Kelas \" + classNumber,\n            value: JSON.stringify({\n                gsheetId: gsheetId,\n                gid: fixedGid // ✨ GID added here\n            }),\n            children: classGroups[classNumber]\n        };\n        tree.push(classNode);\n    }\n\n    return tree;\n}\n\n// In n8n, use the input from the previous node.\nconst inputData = items.map(item => ({ json: item.json }));\nreturn convertNewDataToTree(inputData);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        688
+      ],
+      "id": "cd8b86b1-3de1-4b22-a6ae-70f4779cd0ef",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "dataMapel",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2016,
+        512
+      ],
+      "id": "85cdf768-0363-4eb3-a84e-e94e700bf9bc",
+      "name": "Aggregate5"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "dataEkskul",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1792,
+        688
+      ],
+      "id": "cc4b17de-5291-4345-8dfc-46d37b2d5006",
+      "name": "Aggregate6"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        2560,
+        528
+      ],
+      "id": "bb6a1e7c-764c-4d86-b0db-c66af40446df",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "Name",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        512
+      ],
+      "id": "da4295dd-f675-49be-a59e-49203eaa6376",
+      "name": "Sort"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2f20263a-37be-465a-806b-3516da3c148c",
+              "name": "dataMapel",
+              "value": "={{ $json.data[0].dataMapel }}",
+              "type": "array"
+            },
+            {
+              "id": "a6a17de8-175a-4acf-83c7-86dba96798f8",
+              "name": "dataEkskul",
+              "value": "={{ $json.data[1].dataEkskul }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3008,
+        528
+      ],
+      "id": "7c4abc12-8972-4aae-a4de-467db8cab540",
+      "name": "Edit Fields5"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2784,
+        528
+      ],
+      "id": "24951aca-6304-4f01-b2a6-594fb0a91790",
+      "name": "Aggregate7"
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "path": "web.insantaqwa.org/rapor/sd/nav.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.ftp",
+      "typeVersion": 1,
+      "position": [
+        3568,
+        528
+      ],
+      "id": "fad46bad-bf80-4e39-8886-d9cc88c1fbe9",
+      "name": "FTP",
+      "credentials": {
+        "ftp": {
+          "id": "M42B69YmhgZhPCVv",
+          "name": "web.insantaqwa.org"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "2fbb9602-195a-4f8d-8d9c-92a0e1c4dd3e",
+      "name": "Google Drive1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ztqycVJKh5liScsg",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1376,
+        -160
+      ],
+      "id": "2f938091-80f4-47e0-a9c4-7b44962ab2dd",
+      "name": "Google Drive2",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ztqycVJKh5liScsg",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        432,
+        880
+      ],
+      "id": "e39bbf51-7a4e-4dbd-8752-784910c77adf",
+      "name": "Google Drive3",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ztqycVJKh5liScsg",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.id }}/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "sheets.properties(title,sheetId)"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1632,
+        208
+      ],
+      "id": "c960d7f6-c16a-4e7f-9679-08b79cff8df3",
+      "name": "Get Per Sheet Ids",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "FPssm5pXXCbCrprq",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "protocol": "sftp",
+        "operation": "upload",
+        "path": "=/rapor/sd/25-26/s1/{{ $json.name }} | {{ $now }}.ods",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.ftp",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        -160
+      ],
+      "id": "2b533271-8e8a-4da3-ad6d-736b720a55d4",
+      "name": "FTP1 - Backup",
+      "credentials": {
+        "sftp": {
+          "id": "n2jIfMO07AmAdU8E",
+          "name": "SFTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "protocol": "sftp",
+        "operation": "upload",
+        "path": "=/rapor/sd/25-26/s1/Ekskul | {{ $now }}.ods",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.ftp",
+      "typeVersion": 1,
+      "position": [
+        656,
+        880
+      ],
+      "id": "16985541-d9da-49c3-b29f-e211a238735a",
+      "name": "FTP2 - Backup",
+      "credentials": {
+        "sftp": {
+          "id": "n2jIfMO07AmAdU8E",
+          "name": "SFTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# Mapel",
+        "height": 80
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -16,
+        -128
+      ],
+      "typeVersion": 1,
+      "id": "ad2df135-a76b-4818-961d-10b140b3e86c",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "# Ekskul",
+        "height": 80
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        96,
+        512
+      ],
+      "typeVersion": 1,
+      "id": "da042e6f-c2de-4f02-9c11-9af96359cb16",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "1VFXen2Q4O9vRIMr--g6TTHvxrX1pNUIE",
+            "mode": "id"
+          },
+          "whatToSearch": "folders"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -592,
+        352
+      ],
+      "id": "d0522951-a2d1-40d1-b4df-a974dfc67dd2",
+      "name": "get TahunAjaran",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ztqycVJKh5liScsg",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -816,
+        352
+      ],
+      "id": "f36bb742-ddea-44eb-921c-087c07226d1d",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.id }}",
+            "mode": "id"
+          },
+          "whatToSearch": "folders"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -800,
+        560
+      ],
+      "id": "57a7c7e9-5061-4bf2-95ff-54b955563dac",
+      "name": "get Semester",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ztqycVJKh5liScsg",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.id }}",
+            "mode": "id"
+          },
+          "whatToSearch": "folders"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -592,
+        560
+      ],
+      "id": "7d23ce30-5fbd-4bc2-b71a-1390032d9c8b",
+      "name": "get Mapel",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ztqycVJKh5liScsg",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "Eks",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.id }}",
+            "mode": "id"
+          },
+          "whatToSearch": "files"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -592,
+        736
+      ],
+      "id": "59793bf1-827a-4968-b215-b638bfdd75cd",
+      "name": "get Ekskul",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ztqycVJKh5liScsg",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        32,
+        736
+      ],
+      "id": "d97cd92a-2e99-4f19-bc6c-2617f1cca65f",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -384,
+        560
+      ],
+      "id": "d31ff285-c5d0-470e-8a7b-93c408380708",
+      "name": "Loop Over Items2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Sort",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Per Sheet Ids",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Drive2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate2": {
+      "main": [
+        []
+      ]
+    },
+    "Aggregate3": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Aggregate5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets1": {
+      "main": [
+        [
+          {
+            "node": "Filter1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "Aggregate4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate4": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields4": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate5": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate6": {
+      "main": [
+        []
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort": {
+      "main": [
+        [
+          {
+            "node": "Aggregate3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields5": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate7": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "FTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive2": {
+      "main": [
+        [
+          {
+            "node": "FTP1 - Backup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive3": {
+      "main": [
+        [
+          {
+            "node": "FTP2 - Backup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Per Sheet Ids": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "get TahunAjaran",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get TahunAjaran": {
+      "main": [
+        [
+          {
+            "node": "get Semester",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get Semester": {
+      "main": [
+        [
+          {
+            "node": "get Mapel",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "get Ekskul",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get Mapel": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get Ekskul": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Google Sheets1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Drive3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items2": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Google Drive1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "559ce74c-c4bf-4d57-a21e-669b4e8fc744",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "097d9d2421b31fe8f0d3b69ca96282bcd396bc66ce53e0b7d6fefb8f23b8063d"
+  },
+  "id": "qaggYKFqC5YjRIFK",
+  "tags": []
+}

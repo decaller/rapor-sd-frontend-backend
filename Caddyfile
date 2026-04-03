@@ -8,8 +8,25 @@
 
 {$DOMAIN} {
 
+    # ── Public Safe API Proxies ──────────────────────────────────────────────
+    # Provide safe endpoints for the frontend to fetch logs or trigger sync
+    # without exposing the API key directly in client-side JavaScript.
+    handle /api/public-logs {
+        rewrite * /api/rapor/status
+        reverse_proxy backend:{$BACKEND_PORT:3000} {
+            header_up x-api-key {$API_SECRET_KEY}
+        }
+    }
+
+    handle /api/public-sync {
+        rewrite * /api/rapor/sync
+        reverse_proxy backend:{$BACKEND_PORT:3000} {
+            header_up x-api-key {$API_SECRET_KEY}
+        }
+    }
+
     # ── Backend API ──────────────────────────────────────────────────────────
-    # All /api/* requests are forwarded to the backend container.
+    # All other /api/* requests are forwarded to the backend container.
     # The /api/ prefix is preserved so Express routes remain unchanged.
     handle /api/* {
         reverse_proxy backend:{$BACKEND_PORT:3000}

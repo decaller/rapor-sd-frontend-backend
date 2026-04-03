@@ -39,7 +39,7 @@ const generalLimiter = rateLimit({
 // ─── Routes ──────────────────────────────────────────────────────────────────
 
 // Manually trigger sync process (rate-limited: 1 per 5 minutes)
-router.post('/sync', syncLimiter, async (req, res) => {
+router.all('/sync', syncLimiter, async (req, res) => {
     try {
         await clearLogs();
 

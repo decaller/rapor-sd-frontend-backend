@@ -92,7 +92,7 @@ BACKUP_DRIVE_FOLDER=your_master_backup_folder_id_here
 Notes:
 
 - `DOMAIN=localhost` keeps local development simple. In production this must be your real domain.
-- `API_SECRET_KEY` is required for all `/api/*` routes via the `x-api-key` header.
+- `API_SECRET_KEY` is required for all `/api/*` routes via the `x-api-key` header or the `?api_key=` query parameter.
 - `GOOGLE_APPLICATION_CREDENTIALS` points to the in-container path. The actual JSON file is bind-mounted from `backend-sheet-aggregator-rapor/google-service-account.json`.
 - `ROOT_DRIVE_FOLDER` must be the folder ID, not the full Google Drive URL.
 
@@ -151,7 +151,7 @@ The services will be available through Caddy:
 
 - frontend: `http://localhost`
 - admin dashboard: `http://localhost/admin/logs`
-- API through Caddy: `http://localhost/api/rapor/status`, `http://localhost/api/rapor/data`, `http://localhost/api/rapor/sync`
+- API through Caddy: `http://localhost/api/rapor/status`, `http://localhost/api/rapor/data`, `http://localhost/api/rapor/sync` (You can append `?api_key=YOUR_SECRET_KEY` for easy browser testing)
 
 ### Option 2: Run Frontend and Backend Separately
 
@@ -184,16 +184,16 @@ It features a live-updating dashboard built with Astro and Alpine.js. It securel
 
 ## API Reference
 
-All `/api/*` routes require the `x-api-key` header matching `API_SECRET_KEY`.
+All `/api/*` routes require the `x-api-key` header or `?api_key=` query parameter matching `API_SECRET_KEY`.
 
 Use one of these base URLs depending on how you run the app:
 
 - Docker Compose with Caddy: `http://localhost/api/rapor`
 - Standalone backend process: `http://localhost:3000/api/rapor`
 
-### `POST /api/rapor/sync`
+### `GET` or `POST /api/rapor/sync`
 
-Starts a background sync job and returns `202 Accepted`.
+Starts a background sync job and returns `202 Accepted`. You can also just visit `http://localhost/api/rapor/sync?api_key=YOUR_SECRET_KEY` in your browser.
 
 Example:
 
@@ -225,7 +225,7 @@ curl \
 
 Rate limiting:
 
-- `POST /sync`: 1 request per 5 minutes per IP
+- `GET/POST /sync`: 1 request per 5 minutes per IP
 - `GET /status` and `GET /data`: 60 requests per minute per IP
 
 ## Data Structure Expectations
@@ -298,8 +298,8 @@ Use this after setup or deployment:
 
 1. Confirm `docker compose up --build` or the equivalent Portainer stack starts all three services.
 2. Open the frontend and verify the page loads through Caddy.
-3. Call `GET /api/rapor/status` with the correct `x-api-key`.
-4. Trigger `POST /api/rapor/sync`.
+3. Call `GET /api/rapor/status` with the correct `x-api-key` or `?api_key=` param.
+4. Trigger `GET or POST /api/rapor/sync`.
 5. Watch `/api/rapor/status` until the job completes or fails.
 6. Call `GET /api/rapor/data` and verify the payload matches the expected school year and semester structure.
 7. Confirm the SQLite database persists after a container restart.

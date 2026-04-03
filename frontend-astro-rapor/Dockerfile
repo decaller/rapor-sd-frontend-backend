@@ -37,5 +37,5 @@ EXPOSE 4321
 ENTRYPOINT ["dumb-init", "--"]
 # serve flags:
 #   -l 4321   → listen on port 4321
-#   --single  → SPA mode: fall back to index.html for unknown routes
-CMD ["serve", "dist", "-l", "4321", "--single"]
+#   --single  → omitted because Astro generates separate files for routes
+CMD ["serve", "dist", "-l", "4321"]

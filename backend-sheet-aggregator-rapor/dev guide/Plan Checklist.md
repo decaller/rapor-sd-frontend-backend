@@ -5,12 +5,12 @@ This checklist outlines the steps required to fully implement the Rapor Sync API
 ---
 
 ## 1. 🏗️ Setup & Core Configuration
-- [x] Initialize Node.js project & install dependencies (`express`, `googleapis`, `sqlite3`, `sqlite`, `basic-ftp`, `node-cron`, `cors`, `dotenv`).
+- [x] Initialize Node.js project & install dependencies (`express`, `googleapis`, `sqlite3`, `sqlite`, `node-cron`, `cors`, `dotenv`).
 - [x] Create basic Express server with `/api/rapor/*` routes wired up.
 - [x] Setup `database.js` to initialize SQLite tables (`rapor_data` for JSON payload, `sync_logs` for status).
 - [ ] Place `google-service-account.json` in the project root (generated from Google Cloud Console — see README).
-- [ ] Populate `.env` with all required variables: `PORT`, `ROOT_DRIVE_FOLDER`, `SFTP_HOST`, `SFTP_USER`, `SFTP_PASS`.
-- [ ] Update `.env.example` to document all required variables (currently only shows `PORT`).
+- [ ] Populate `.env` with all required variables: `PORT`, `ROOT_DRIVE_FOLDER`, `BACKUP_DRIVE_FOLDER`.
+- [x] Update `.env.example` to document all required variables (currently only shows `PORT`).
 - [ ] Verify `.gitignore` covers both `.env` and `google-service-account.json`.
 
 ---
@@ -26,12 +26,13 @@ This checklist outlines the steps required to fully implement the Rapor Sync API
 ## 3. 📊 Google Sheets Metadata Extraction
 - [x] Implement `getSpreadsheetMetadata(spreadsheetId)` — returns sheet tab names and GIDs.
 - [x] **Mapel Branch**: Basic structure built — groups sheets by Rekapitulasi, Cetak Rapor, Cover, and subjects.
-  - [ ] **Expand abbreviation map** — only PAI, PP, MTK currently handled. Full mapping from SETUP rows 7–13 needed.
-  - [ ] Handle `Biodata` sheet grouping (currently may fall into catch-all or be skipped).
-- [ ] **Ekskul Branch Logic** (⚠️ SCAFFOLDED / HARDCODED):
-  - Currently outputs placeholder labels (`"Kelas 1"`, `"1A"`, `"1B"`) with hardcoded row ranges.
-  - Must dynamically read SETUP sheet to determine class groupings and calculate real row ranges.
-  - Fixed GID `1676084899` is correct — keep as-is per specification.
+  - [x] **Expand abbreviation map** — Full mapping: PAI, PP, BI, MTK, IPAS, PJOK, SBY, BSU, BING, TIK, BAR, FQH, HDS.
+  - [x] Handle `Biodata` sheet grouping.
+- [x] **Ekskul Branch Logic** (✅ IMPLEMENTED):
+  - Scans column A of Level tab and Nilai tab independently to find subclass starting rows.
+  - If both Level AND Nilai tabs exist → all subclasses get `valueLevel` + `valueNilai` (per-file decision).
+  - If only Level tab exists → all subclasses get simple `value`.
+  - Subclasses are auto-discovered and grouped by grade (Kelas 1, 2, …) dynamically.
 
 ---
 
@@ -56,12 +57,12 @@ This checklist outlines the steps required to fully implement the Rapor Sync API
 
 ---
 
-## 7. 📤 Backup Routine (FTP)
-- [x] `ftpService.js` — `uploadFromStream(readStream, remotePath)` implemented using `basic-ftp`.
+## 7. 📤 Backup Routine (Google Drive)
+- [x] `backupService.js` logic implemented within `googleApi.js` and `syncService.js`.
 - [x] `getOdsExportStream(fileId)` — implemented in `googleApi.js`.
-- [ ] **Wire up ODS upload inside sync loop** — `getOdsExportStream` and `uploadFromStream` are **not yet called** from `syncService.js`. This is the main missing piece.
-- [ ] Confirm FTP `secure` flag (currently `false`) with server admin — switch to `true` for FTPS/TLS.
-- [ ] Define correct `remotePath` convention for uploaded `.ods` files on the server.
+- [x] **Wire up ODS upload inside sync loop** — Done, files are copied to the daily backup folder.
+- [x] Confirm backup folder ID (`BACKUP_DRIVE_FOLDER`) is set in `.env`.
+- [x] Define correct hierarchy for daily backups (e.g., `YYYY-MM-DD/filename.ods`).
 
 ---
 
