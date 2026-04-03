@@ -13,7 +13,7 @@ This root README replaces the scattered project notes with one setup, operations
 The stack has three runtime services:
 
 - `backend`: Node.js + Express API, SQLite storage, Google Drive/Sheets integration, scheduled sync job.
-- `frontend`: Astro site, providing both the main report viewer and a secure Admin Log Dashboard.
+- `frontend`: Astro site, powered by Alpine.js for interactive client-side state, providing both the main report viewer and a secure Admin Log Dashboard.
 - `caddy`: reverse proxy and TLS terminator. Requests to `/api/*` go to the backend; everything else goes to the frontend.
 
 High-level flow:
