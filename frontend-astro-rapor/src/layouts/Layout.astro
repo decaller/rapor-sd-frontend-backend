@@ -24,6 +24,9 @@ const { title = 'Rapor SD' } = Astro.props;
       if (!pwd) {
         pwd = prompt("Please enter the password to access the application:");
         if (pwd) {
+          pwd = pwd.trim();
+        }
+        if (pwd) {
           sessionStorage.setItem('app_password', pwd);
         } else {
           document.write('<div style="font-family: sans-serif; text-align: center; margin-top: 50px;">Access denied. Refresh to try again.</div>');

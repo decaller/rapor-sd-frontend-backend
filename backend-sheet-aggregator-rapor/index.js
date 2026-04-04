@@ -8,6 +8,7 @@ const { initCronJobs } = require('./cron');
 const { runSync } = require('./services/syncService');
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy (Caddy)
 app.use(cors());
 app.use(express.json());
 
@@ -32,7 +33,9 @@ const requireApiKey = (req, res, next) => {
     const adminPassword = req.headers['x-admin-password'] || req.query.admin_password;
     if (adminPassword && process.env.ADMIN_PASSWORD_HASH) {
         const hash = crypto.createHash('sha256').update(adminPassword).digest('hex');
-        if (hash === process.env.ADMIN_PASSWORD_HASH) {
+        const isMatch = hash === process.env.ADMIN_PASSWORD_HASH;
+        console.log(`[AUTH] Client provided password, hash match: ${isMatch}`);
+        if (isMatch) {
             return next();
         }
     }

@@ -1,32 +1,59 @@
 ---
 // src/pages/admin/logs.astro
+import Layout from '../../layouts/Layout.astro';
 import LogViewer from '../../components/LogViewer.astro';
 ---
 
-<html lang="en" data-theme="dark">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <title>System Logs | Rapor SD</title>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@latest/dist/full.min.css" rel="stylesheet" type="text/css" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script is:inline>
-      let pwd = sessionStorage.getItem('app_password');
-      if (!pwd) {
-        pwd = prompt("Please enter the password to access the application:");
-        if (pwd) {
-          sessionStorage.setItem('app_password', pwd);
-        } else {
-          document.write('<div style="font-family: sans-serif; text-align: center; color: white; margin-top: 50px;">Access denied. Refresh to try again.</div>');
-          window.stop();
-        }
-      }
-    </script>
-  </head>
-  <body class="bg-base-300 min-h-screen">
-    <div class="px-4 py-8">
-      <!-- Mount the Alpine.js Component -->
-      <LogViewer />
-    </div>
-  </body>
-</html>
+<Layout title="System Logs | Rapor SD">
+  <div class="flex flex-col min-h-screen bg-base-300 antialiased" data-theme="dark">
+    <!-- Basic Layout Header -->
+    <header class="navbar bg-base-200 shadow-md px-4 sm:px-8 border-b border-base-content/5">
+      <div class="flex-1 flex items-center gap-4">
+        <a href="/" class="btn btn-ghost btn-sm gap-2 normal-case font-medium">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          <span class="hidden xs:inline">Kembali ke Dashboard</span>
+        </a>
+        <div class="h-6 w-px bg-base-content/10 hidden sm:block"></div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-sm font-bold tracking-wider uppercase opacity-80 hidden sm:block">Admin Logs</h1>
+          <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 border border-success/20">
+            <span class="relative flex h-1.5 w-1.5">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-success"></span>
+            </span>
+            <span class="text-[10px] font-bold text-success uppercase tracking-tighter">Live Monitor</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex-none gap-2">
+        <div class="badge badge-outline badge-xs opacity-40 font-mono">CC-3C-CA</div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 px-4 py-6 sm:px-8 overflow-y-auto">
+      <div class="w-[90%] mx-auto mt-4">
+        <LogViewer />
+      </div>
+    </main>
+
+    <!-- Basic Footer -->
+    <footer class="footer footer-center p-4 bg-base-100 text-base-content/50 border-t border-base-content/5 text-xs">
+      <div>
+        <p>© 2026 Rapor SD - Monitoring & Sync Dashboard</p>
+      </div>
+    </footer>
+  </div>
+</Layout>
+
+<style is:global>
+  /* Ensure the body doesn't overflow since we want a fixed header if needed, 
+     but for now let's keep it simple scrollable */
+  html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+  }
+</style>

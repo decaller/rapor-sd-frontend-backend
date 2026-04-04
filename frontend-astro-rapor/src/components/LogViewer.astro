@@ -4,7 +4,7 @@
 <div 
   x-data="logViewerComponent()" 
   x-init="init()"
-  class="max-w-5xl mx-auto p-4 sm:p-6 bg-base-100 rounded-box shadow-xl border border-base-content/5 mt-4"
+  class="w-full p-4 sm:p-6 bg-base-100 rounded-box shadow-xl border border-base-content/5 mt-4"
 >
   <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b border-base-content/10 pb-4 gap-4">
     <div class="flex items-center gap-3">
@@ -15,8 +15,11 @@
           :class="isSyncing ? 'bg-primary' : 'bg-base-content/30'"
         ></span>
       </div>
-      <h2 class="text-xl font-bold tracking-tight text-base-content">System Logs</h2>
-      <span x-show="isRateLimited" class="badge badge-error badge-sm">Rate Limited</span>
+      <div class="flex flex-col">
+        <span class="text-xs uppercase tracking-widest text-base-content/50 font-bold">Sync Status</span>
+        <span x-show="!isRateLimited" class="text-sm font-medium" :class="isSyncing ? 'text-primary' : 'text-base-content/70'" x-text="isSyncing ? 'Synchronizing...' : 'Idle'"></span>
+        <span x-show="isRateLimited" class="badge badge-error badge-sm">Rate Limited</span>
+      </div>
     </div>
     <div class="flex items-center gap-2">
       <button 
@@ -42,7 +45,7 @@
   >
     <div 
       @click="showSyncCollapse = !showSyncCollapse" 
-      class="collapse-title flex items-center justify-between font-mono font-bold text-sm uppercase tracking-widest cursor-pointer"
+      class="collapse-title flex items-center justify-between font-mono font-bold text-sm uppercase tracking-widest cursor-pointer py-3 min-h-0"
     >
       <span :class="syncStatusOk ? 'text-success' : 'text-error'" x-text="syncStatusOk ? 'Sync Execution: Success' : 'Sync Execution: Failed'"></span>
     </div>
@@ -56,7 +59,7 @@
   </div>
 
   <!-- Log Container -->
-  <div class="space-y-3 overflow-y-auto pr-2 custom-scrollbar" style="max-height: calc(100vh - 200px);">
+  <div class="space-y-3 overflow-y-auto pr-2 custom-scrollbar" style="max-height: calc(100vh - 320px);">
     <!-- Empty State -->
     <div x-show="runs.length === 0" class="text-base-content/50 italic py-10 text-center" style="display: none;">
       // No sync runs found.
@@ -70,7 +73,7 @@
         <!-- Accordion Header -->
         <div 
           @click="toggle(run.id)" 
-          class="collapse-title flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 font-mono pb-0"
+          class="collapse-title flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 font-mono py-3 min-h-0"
         >
           <div class="flex items-center gap-4">
             <div class="badge font-bold shrink-0 shadow-sm" :class="getBadgeClass(run.status)" x-text="run.status"></div>
