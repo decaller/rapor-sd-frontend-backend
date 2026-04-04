@@ -23,19 +23,17 @@ if (!process.env.API_SECRET_KEY) {
 }
 
 const requireApiKey = (req, res, next) => {
-    // 1. Check programmatic API Key
-    const clientKey = req.headers['x-api-key'] || req.query.api_key;
+    // 1. Check programmatic API Key (header only — never accept secrets in query params)
+    const clientKey = req.headers['x-api-key'];
     if (clientKey && clientKey === process.env.API_SECRET_KEY) {
         return next();
     }
 
-    // 2. Check Admin Password (for frontend dashboard)
-    const adminPassword = req.headers['x-admin-password'] || req.query.admin_password;
+    // 2. Check Admin Password (header only — never accept secrets in query params)
+    const adminPassword = req.headers['x-admin-password'];
     if (adminPassword && process.env.ADMIN_PASSWORD_HASH) {
-        const hash = crypto.createHash('sha256').update(adminPassword).digest('hex');
-        const isMatch = hash === process.env.ADMIN_PASSWORD_HASH;
-        console.log(`[AUTH] Client provided password, hash match: ${isMatch}`);
-        if (isMatch) {
+        const hash = crypto.createHash('sha256').update(adminPassword.trim()).digest('hex');
+        if (hash === process.env.ADMIN_PASSWORD_HASH) {
             return next();
         }
     }
