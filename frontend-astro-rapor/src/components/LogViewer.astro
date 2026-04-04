@@ -16,14 +16,15 @@
         ></span>
       </div>
       <h2 class="text-lg font-medium text-white tracking-tight">System Logs</h2>
+      <span x-show="isRateLimited" class="text-red-400 text-xs ml-2 border border-red-500/50 bg-red-500/10 px-2 py-0.5 rounded">Rate Limited</span>
     </div>
     <div class="flex items-center gap-4">
       <button 
         @click="triggerSync" 
-        :disabled="isSyncing"
+        :disabled="isSyncing || isRateLimited"
         class="text-blue-400 hover:text-blue-300 disabled:text-gray-600 transition-colors uppercase text-xs font-bold tracking-widest flex items-center gap-2"
       >
-        <span x-text="isSyncing ? 'Sync in Progress' : 'Execute Sync'"></span>
+        <span x-text="isSyncing ? 'Sync in Progress...' : (isRateLimited ? 'Wait to Sync' : 'Execute Sync')"></span>
         <svg x-show="!isSyncing" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
         </svg>
@@ -32,24 +33,59 @@
   </div>
 
   <!-- Log Container -->
-  <div class="space-y-1 overflow-y-auto pr-2 custom-scrollbar" style="max-height: calc(100vh - 200px);">
+  <div class="space-y-3 overflow-y-auto pr-2 custom-scrollbar" style="max-height: calc(100vh - 200px);">
     <!-- Empty State -->
-    <div x-show="logs.length === 0" class="text-gray-600 italic py-10" style="display: none;">
-      // No log entries found.
+    <div x-show="runs.length === 0" class="text-gray-600 italic py-10" style="display: none;">
+      // No sync runs found.
     </div>
     
-    <!-- Loop through logs -->
-    <template x-for="log in logs" :key="log.id">
-      <div 
-        class="py-1 flex items-start gap-3 border-l-2 pl-4 transition-colors hover:bg-white/5"
-        :class="getBorderColor(log.status)"
-      >
-        <span class="text-gray-600 shrink-0 select-none" x-text="formatTime(log.timestamp)"></span>
-        <span class="font-bold shrink-0 min-w-[80px]" :class="getTextColor(log.status)" x-text="`[${log.status}]` "></span>
-        <div class="flex-1 min-w-0">
-          <span class="text-gray-400 font-bold" x-text="log.step_name"></span>
-          <span class="text-gray-500 mx-2">--</span>
-          <span class="text-gray-300 break-words" x-text="log.message"></span>
+    <!-- Loop through runs -->
+    <template x-for="(run, index) in runs" :key="run.id">
+      <div class="border rounded-md overflow-hidden bg-gray-900/50" :class="getBorderColorSecondary(run.status)">
+        <!-- Accordion Header -->
+        <div 
+          @click="toggle(run.id)" 
+          class="px-4 py-3 cursor-pointer flex items-center justify-between hover:bg-white/5 transition-colors"
+        >
+          <div class="flex items-center gap-4">
+            <span class="font-bold w-24 shrink-0" :class="getTextColor(run.status)" x-text="`[${run.status}]`"></span>
+            <span class="text-gray-400" x-text="formatTime(run.start_time)"></span>
+            <span class="text-gray-500" x-show="run.duration_ms !== null" x-text="`(${(run.duration_ms / 1000).toFixed(1)}s)`"></span>
+          </div>
+          <div>
+            <!-- Chevron -->
+            <svg class="w-4 h-4 text-gray-500 transition-transform" :class="expanded === run.id ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Accordion Body -->
+        <div x-show="expanded === run.id">
+          <!-- Logs List -->
+          <div class="bg-black/50 p-4 border-t" :class="getBorderColorSecondary(run.status)">
+            <h3 class="text-gray-500 uppercase tracking-widest text-xs mb-3"># Execution Logs</h3>
+            <div x-show="(!run.logs || run.logs.length === 0)" class="text-gray-600 italic mb-4">// No detailed logs.</div>
+            <div class="space-y-1 mb-6">
+              <template x-for="log in run.logs" :key="Math.random()">
+                <div class="py-1 flex items-start gap-3 pl-2 transition-colors hover:bg-white/5">
+                  <span class="text-gray-600 shrink-0 select-none" x-text="formatTimeOnly(log.timestamp)"></span>
+                  <span class="font-bold shrink-0 min-w-[80px]" :class="getTextColor(log.status)" x-text="`[${log.status}]` "></span>
+                  <div class="flex-1 min-w-0">
+                    <span class="text-gray-400 font-bold" x-text="log.step_name"></span>
+                    <span class="text-gray-500 mx-2">--</span>
+                    <span class="text-gray-300 break-words" x-text="log.message"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+            
+            <!-- API Data Payload -->
+            <div x-show="run.api_data">
+               <h3 class="text-gray-500 uppercase tracking-widest text-xs mb-3 border-t border-gray-800 pt-4"># Internal API Mapping Data payload</h3>
+               <textarea readonly class="w-full h-48 bg-gray-950 text-gray-400 border border-gray-800 rounded p-3 font-mono text-xs focus:outline-none custom-scrollbar" x-text="JSON.stringify(run.api_data, null, 2)"></textarea>
+            </div>
+          </div>
         </div>
       </div>
     </template>
@@ -73,15 +109,15 @@
 </style>
 
 <script is:inline>
-  // Define the Alpine data component in global scope
   document.addEventListener('alpine:init', () => {
     Alpine.data('logViewerComponent', () => ({
-      logs: [],
+      runs: [],
+      expanded: null,
       pollingInterval: null,
+      isRateLimited: false,
       
-      // Computed property using a getter
       get isSyncing() {
-        return this.logs.length > 0 && this.logs[0].status === 'PENDING';
+        return this.runs.length > 0 && this.runs[0].status === 'PENDING';
       },
 
       init() {
@@ -96,22 +132,49 @@
       async fetchLogs() {
         try {
           const res = await fetch('/api/public-logs');
-          if (res.ok) {
-            this.logs = await res.json();
+          if (res.status === 429) {
+            this.isRateLimited = true;
+          } else if (res.ok) {
+            this.isRateLimited = false;
+            const fetchedRuns = await res.json();
+            this.runs = fetchedRuns;
+            
+            // Auto expand the first one if it's currently running and nothing is expanded
+            if (this.expanded === null && this.runs.length > 0 && this.runs[0].status === 'PENDING') {
+                this.expanded = this.runs[0].id;
+            }
           }
         } catch (err) {
           console.error("Log fetch error:", err);
         }
       },
 
+      toggle(id) {
+        if (this.expanded === id) {
+           this.expanded = null;
+        } else {
+           this.expanded = id;
+        }
+      },
+
       async triggerSync() {
         if (!confirm("Are you sure you want to force a background sync?")) return;
-        
+        this.isRateLimited = false;
         try {
            const res = await fetch('/api/public-sync', { method: 'POST' });
-           if (res.ok) {
+           if (res.status === 429) {
+             this.isRateLimited = true;
+             const errorData = await res.json();
+             alert(errorData.error || "Rate limited. Please try again soon.");
+           } else if (res.ok) {
              alert("Sync triggered successfully.");
+             this.expanded = null; // reset to allow auto-expand inside fetchLogs
              this.fetchLogs();
+             
+             // Expand the latest soon
+             setTimeout(() => {
+                 if (this.runs.length > 0) this.expanded = this.runs[0].id;
+             }, 500);
            } else {
              alert("Failed to trigger sync: " + res.statusText);
            }
@@ -121,11 +184,10 @@
         }
       },
 
-      // Styling and Formatting Helpers
-      getBorderColor(status) {
-        if (status === 'SUCCESS') return 'border-green-500';
-        if (status === 'ERROR') return 'border-red-500';
-        return 'border-yellow-500';
+      getBorderColorSecondary(status) {
+        if (status === 'SUCCESS') return 'border-green-900/30';
+        if (status === 'ERROR') return 'border-red-900/30';
+        return 'border-yellow-900/30';
       },
 
       getTextColor(status) {
@@ -135,6 +197,12 @@
       },
 
       formatTime(isoString) {
+        if (!isoString) return '';
+        const d = new Date(isoString);
+        return d.toLocaleString('id-ID', { hour12: false });
+      },
+
+      formatTimeOnly(isoString) {
         if (!isoString) return '';
         const d = new Date(isoString);
         return d.toLocaleTimeString('id-ID', { hour12: false });

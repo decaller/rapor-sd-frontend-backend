@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
-const { clearLogs, getLogs, getLatestNavTree } = require('../database');
+const { clearLogs, getLogs, getLatestNavTree, getAllRuns } = require('../database');
 const { runSync } = require('../services/syncService');
 
 // ─── Rate Limiters ──────────────────────────────────────────────────────────
@@ -41,7 +41,6 @@ const generalLimiter = rateLimit({
 // Manually trigger sync process (rate-limited: 1 per 5 minutes)
 router.all('/sync', syncLimiter, async (req, res) => {
     try {
-        await clearLogs();
 
         // Spawn async so we don't block the HTTP request.
         // The frontend will poll /status to check on its progress.
@@ -71,8 +70,8 @@ router.get('/data', generalLimiter, async (req, res) => {
 // Get real-time status of the currently running sync process (rate-limited: 60 per minute)
 router.get('/status', generalLimiter, async (req, res) => {
     try {
-        const logs = await getLogs();
-        res.status(200).json(logs);
+        const runs = await getAllRuns();
+        res.status(200).json(runs);
     } catch (err) {
         console.error("Failed to fetch logs:", err);
         res.status(500).json({ error: "Failed to fetch status logs." });

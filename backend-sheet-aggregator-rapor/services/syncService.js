@@ -1,4 +1,4 @@
-const { logStep, saveNavTree } = require('../database');
+const { logStep, saveNavTree, startRun, updateRun } = require('../database');
 const { 
     getFolderContents, 
     getSpreadsheetMetadata, 
@@ -223,13 +223,30 @@ async function buildEkskulNodes(ekskulFile) {
 //  runSync  –  Main orchestration
 // -----------------------------------------------------------------------
 async function runSync() {
+    let currentLogs = [];
+    let finalJson = null;
+    let runId = null;
+    const startTime = Date.now();
+
     try {
-        await logStep('SYNC_START', 'PENDING', 'Started the synchronization process.');
+        runId = await startRun();
+    } catch(e) { console.error("Could not start run in DB:", e); }
+
+    const addLog = async (step_name, status, message) => {
+        try { await logStep(step_name, status, message); } catch(e) {}
+        currentLogs.push({ step_name, status, message, timestamp: new Date().toISOString() });
+        if (runId) {
+            try { await updateRun(runId, 'PENDING', currentLogs); } catch(e) {}
+        }
+    };
+
+    try {
+        await addLog('SYNC_START', 'PENDING', 'Started the synchronization process.');
 
         const rootFolderId = process.env.ROOT_DRIVE_FOLDER;
         if (!rootFolderId) throw new Error('ROOT_DRIVE_FOLDER is not set in .env');
 
-        await logStep('DRIVE_TRAVERSAL', 'PENDING', 'Traversing Google Drive folders...');
+        await addLog('DRIVE_TRAVERSAL', 'PENDING', 'Traversing Google Drive folders...');
 
         const tahunAjaranFolders = await getFolderContents(rootFolderId);
         const finalData          = [];
@@ -264,7 +281,7 @@ async function runSync() {
                          nameLower.includes('ekstrakurikuler') ||
                          nameLower.startsWith('eks'))
                     ) {
-                        await logStep('PROCESS_EKSKUL', 'PENDING',
+                        await addLog('PROCESS_EKSKUL', 'PENDING',
                             `Processing Ekskul: ${item.name} (${ta.name} Sem ${semesterNum})`);
 
                         processedSheets.push({ id: item.id, name: item.name });
@@ -278,7 +295,7 @@ async function runSync() {
 
                     // ── CLASS FOLDER: contains per-class spreadsheets ───────
                     } else if (item.mimeType === 'application/vnd.google-apps.folder') {
-                        await logStep('PROCESS_MAPEL', 'PENDING',
+                        await addLog('PROCESS_MAPEL', 'PENDING',
                             `Processing class folder: ${item.name} (${ta.name} Sem ${semesterNum})`);
 
                         const classFiles = await getFolderContents(item.id);
@@ -301,7 +318,7 @@ async function runSync() {
                     // ── CLASS SPREADSHEET directly in Semester folder ───────
                     // (Handles flat Drive structure without group sub-folders)
                     } else if (item.mimeType === 'application/vnd.google-apps.spreadsheet') {
-                        await logStep('PROCESS_MAPEL', 'PENDING',
+                        await addLog('PROCESS_MAPEL', 'PENDING',
                             `Processing class spreadsheet: ${item.name}`);
 
                         processedSheets.push({ id: item.id, name: item.name });
@@ -322,16 +339,16 @@ async function runSync() {
             }
         }
 
-        const finalJson = { title: 'Rapor SD', data: finalData };
+        finalJson = { title: 'Rapor SD', data: finalData };
 
-        await logStep('DB_SAVE', 'PENDING', 'Saving nav tree to database.');
+        await addLog('DB_SAVE', 'PENDING', 'Saving nav tree to database.');
         await saveNavTree(finalJson);
 
         // ── BACKUP ──────────────────────────────────────────────────────────
         try {
             const backupFolderId = process.env.BACKUP_DRIVE_FOLDER;
             if (backupFolderId) {
-                await logStep('BACKUP_START', 'PENDING', 'Starting Google Drive backup...');
+                await addLog('BACKUP_START', 'PENDING', 'Starting Google Drive backup...');
                 const dateFolderId = await getOrCreateDateFolder(backupFolderId);
 
                 console.log(`📦 Copying ${processedSheets.length} sheets to backup folder...`);
@@ -340,20 +357,29 @@ async function runSync() {
                 );
                 await backupNavJsonToDrive(finalJson, dateFolderId);
 
-                await logStep('BACKUP_COMPLETE', 'SUCCESS', 'Backup finished.');
+                await addLog('BACKUP_COMPLETE', 'SUCCESS', 'Backup finished.');
             } else {
                 console.warn('⚠️ BACKUP_DRIVE_FOLDER not set. Skipping backup.');
             }
         } catch (backupErr) {
             console.error('❌ Backup failed:', backupErr);
-            await logStep('BACKUP_ERROR', 'ERROR', backupErr.message);
+            await addLog('BACKUP_ERROR', 'ERROR', backupErr.message);
         }
 
-        await logStep('SYNC_COMPLETE', 'SUCCESS', 'Synchronization finished successfully.');
+        await addLog('SYNC_COMPLETE', 'SUCCESS', 'Synchronization finished successfully.');
+        
+        if (runId) {
+            const end = Date.now();
+            await updateRun(runId, 'SUCCESS', currentLogs, finalJson, new Date().toISOString(), end - startTime);
+        }
 
     } catch (error) {
         console.error('Sync process failed:', error);
-        await logStep('SYNC_ERROR', 'ERROR', error.message);
+        await addLog('SYNC_ERROR', 'ERROR', error.message);
+        if (runId) {
+            const end = Date.now();
+            await updateRun(runId, 'ERROR', currentLogs, finalJson, new Date().toISOString(), end - startTime);
+        }
     }
 }
 

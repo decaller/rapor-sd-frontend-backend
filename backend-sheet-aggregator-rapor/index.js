@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const crypto = require('crypto');
 const { initDB, getLatestNavTree } = require('./database');
 const apiRoutes = require('./routes/api');
 const { initCronJobs } = require('./cron');
@@ -21,12 +22,22 @@ if (!process.env.API_SECRET_KEY) {
 }
 
 const requireApiKey = (req, res, next) => {
-    // Also check query string for easy browser testing: ?api_key=your_key
+    // 1. Check programmatic API Key
     const clientKey = req.headers['x-api-key'] || req.query.api_key;
-    if (!clientKey || clientKey !== process.env.API_SECRET_KEY) {
-        return res.status(403).json({ error: 'Forbidden: Invalid or missing API Key.' });
+    if (clientKey && clientKey === process.env.API_SECRET_KEY) {
+        return next();
     }
-    next();
+
+    // 2. Check Admin Password (for frontend dashboard)
+    const adminPassword = req.headers['x-admin-password'] || req.query.admin_password;
+    if (adminPassword && process.env.ADMIN_PASSWORD_HASH) {
+        const hash = crypto.createHash('sha256').update(adminPassword).digest('hex');
+        if (hash === process.env.ADMIN_PASSWORD_HASH) {
+            return next();
+        }
+    }
+
+    return res.status(403).json({ error: 'Forbidden: Invalid or missing credentials.' });
 };
 
 // Apply the API key check to ALL /api/* routes

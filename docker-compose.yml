@@ -11,6 +11,7 @@ services:
       PORT: ${BACKEND_PORT:-3000}
       DB_PATH: /app/database/database.sqlite
       API_SECRET_KEY: ${API_SECRET_KEY}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
       ROOT_DRIVE_FOLDER: ${ROOT_DRIVE_FOLDER}
       BACKUP_DRIVE_FOLDER: ${BACKUP_DRIVE_FOLDER}
       GOOGLE_APPLICATION_CREDENTIALS: /app/google-service-account.json

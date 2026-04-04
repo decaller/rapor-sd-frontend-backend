@@ -24,6 +24,16 @@ async function initDB() {
             nav_tree TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
+
+        CREATE TABLE IF NOT EXISTS sync_runs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            status TEXT,
+            start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+            end_time DATETIME,
+            duration_ms INTEGER,
+            logs TEXT,
+            api_data TEXT
+        );
     `);
     
     console.log('Database initialized.');
@@ -45,6 +55,39 @@ async function clearLogs() {
 async function getLogs() {
     if (!db) return [];
     return await db.all(`SELECT * FROM sync_logs ORDER BY timestamp ASC`);
+}
+
+async function startRun() {
+    if (!db) return null;
+    const result = await db.run(
+        `INSERT INTO sync_runs (status, logs) VALUES (?, ?)`,
+        ['PENDING', '[]']
+    );
+    return result.lastID;
+}
+
+async function updateRun(id, status, logs, apiData = null, endTime = null, durationMs = null) {
+    if (!db) return;
+    await db.run(
+        `UPDATE sync_runs SET 
+            status = coalesce(?, status), 
+            logs = coalesce(?, logs), 
+            api_data = coalesce(?, api_data), 
+            end_time = coalesce(?, end_time), 
+            duration_ms = coalesce(?, duration_ms) 
+         WHERE id = ?`,
+        [status, JSON.stringify(logs), apiData ? JSON.stringify(apiData) : null, endTime, durationMs, id]
+    );
+}
+
+async function getAllRuns() {
+    if (!db) return [];
+    const rows = await db.all(`SELECT * FROM sync_runs ORDER BY id DESC LIMIT 50`);
+    return rows.map(row => {
+        try { row.logs = row.logs ? JSON.parse(row.logs) : []; } catch(e) { row.logs = []; }
+        try { row.api_data = row.api_data ? JSON.parse(row.api_data) : null; } catch(e) { row.api_data = null; }
+        return row;
+    });
 }
 
 async function saveNavTree(navTreeJson) {
@@ -74,5 +117,8 @@ module.exports = {
     clearLogs,
     getLogs,
     saveNavTree,
-    getLatestNavTree
+    getLatestNavTree,
+    startRun,
+    updateRun,
+    getAllRuns
 };

@@ -180,7 +180,7 @@ Important:
 ## Admin Dashboard
 
 An admin interface is available at `/admin/logs` (e.g., `http://localhost/admin/logs` when running via Compose, or `http://localhost:4321/admin/logs` directly). 
-It features a live-updating dashboard built with Astro and Alpine.js. It securely polls the backend's `/api/rapor/status` endpoint via a frontend Astro proxy endpoint (`/api/proxy-logs`), successfully hiding the `API_SECRET_KEY` from the client. The dashboard also provides a button to trigger a force-sync via the background service.
+It features a live-updating historical execution dashboard built with Astro and Alpine.js. Access to the dashboard is protected by a password-only login (configured via `ADMIN_PASSWORD_HASH` in `.env`), preventing unauthorized access without needing a username. The frontend securely polls the backend's `/api/rapor/status` endpoint directly using the provided password for authentication, successfully hiding the `API_SECRET_KEY` from the client. The dashboard shows an accordion list of previous runs, detailed step logs, the final API payload data for each, and real-time running progress. It also provides a button to trigger and monitor a force-sync from the UI.
 
 ## API Reference
 
@@ -205,7 +205,7 @@ curl -X POST \
 
 ### `GET /api/rapor/status`
 
-Returns sync log rows used for live progress reporting.
+Returns an array of sync run histories (including their statuses, logs, execution durations, and final data trees) used for live progress tracking and historical system reviews.
 
 ```bash
 curl \
