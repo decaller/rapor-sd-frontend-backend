@@ -19,6 +19,18 @@ const { title = 'Rapor SD' } = Astro.props;
     <link rel="icon" href="/favicon.ico" />
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
     <title>{title}</title>
+    <script is:inline>
+      let pwd = sessionStorage.getItem('app_password');
+      if (!pwd) {
+        pwd = prompt("Please enter the password to access the application:");
+        if (pwd) {
+          sessionStorage.setItem('app_password', pwd);
+        } else {
+          document.write('<div style="font-family: sans-serif; text-align: center; margin-top: 50px;">Access denied. Refresh to try again.</div>');
+          window.stop();
+        }
+      }
+    </script>
   </head>
   <body class="bg-atlantis-50">
     <slot />

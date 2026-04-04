@@ -26,7 +26,16 @@ document.addEventListener('alpine:init', () => {
 
     async fetchNavData(url: string) {
       try {
-        const response = await fetch(url);
+        const pwd = sessionStorage.getItem('app_password');
+        const response = await fetch(url, { headers: { 'x-admin-password': pwd || '' } });
+        
+        if (response.status === 403) {
+          sessionStorage.removeItem('app_password');
+          alert("Invalid password.");
+          window.location.reload();
+          throw new Error('Unauthorized');
+        }
+        
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const navData = await response.json();
 

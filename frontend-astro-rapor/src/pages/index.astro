@@ -7,8 +7,7 @@ import RefreshToast from '../components/RefreshToast.astro';
 import BreadcrumbBar from '../components/BreadcrumbBar.astro';
 import SemesterModal from '../components/SemesterModal.astro';
 
-const apiSecret = import.meta.env.API_SECRET_KEY || 'replace_with_a_strong_random_secret_key';
-const navJsonUrl = `/api/rapor/data?api_key=${apiSecret}`;
+const navJsonUrl = `/api/rapor/data`;
 ---
 
 <Layout title="Rapor SD">

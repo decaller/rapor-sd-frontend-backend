@@ -4,28 +4,28 @@
 <div 
   x-data="logViewerComponent()" 
   x-init="init()"
-  class="max-w-5xl mx-auto text-gray-300 font-mono text-xs sm:text-sm"
+  class="max-w-5xl mx-auto p-4 sm:p-6 bg-base-100 rounded-box shadow-xl border border-base-content/5 mt-4"
 >
-  <div class="flex justify-between items-center mb-6 border-b border-gray-800 pb-4">
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b border-base-content/10 pb-4 gap-4">
     <div class="flex items-center gap-3">
       <div class="relative flex h-3 w-3">
-        <span x-show="isSyncing" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+        <span x-show="isSyncing" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
         <span 
           class="relative inline-flex rounded-full h-3 w-3"
-          :class="isSyncing ? 'bg-blue-500' : 'bg-gray-700'"
+          :class="isSyncing ? 'bg-primary' : 'bg-base-content/30'"
         ></span>
       </div>
-      <h2 class="text-lg font-medium text-white tracking-tight">System Logs</h2>
-      <span x-show="isRateLimited" class="text-red-400 text-xs ml-2 border border-red-500/50 bg-red-500/10 px-2 py-0.5 rounded">Rate Limited</span>
+      <h2 class="text-xl font-bold tracking-tight text-base-content">System Logs</h2>
+      <span x-show="isRateLimited" class="badge badge-error badge-sm">Rate Limited</span>
     </div>
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-2">
       <button 
         @click="triggerSync" 
         :disabled="isSyncing || isRateLimited"
-        class="text-blue-400 hover:text-blue-300 disabled:text-gray-600 transition-colors uppercase text-xs font-bold tracking-widest flex items-center gap-2"
+        class="btn btn-sm btn-primary"
       >
         <span x-text="isSyncing ? 'Sync in Progress...' : (isRateLimited ? 'Wait to Sync' : 'Execute Sync')"></span>
-        <svg x-show="!isSyncing" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg x-show="!isSyncing" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
         </svg>
       </button>
@@ -35,46 +35,42 @@
   <!-- Log Container -->
   <div class="space-y-3 overflow-y-auto pr-2 custom-scrollbar" style="max-height: calc(100vh - 200px);">
     <!-- Empty State -->
-    <div x-show="runs.length === 0" class="text-gray-600 italic py-10" style="display: none;">
+    <div x-show="runs.length === 0" class="text-base-content/50 italic py-10 text-center" style="display: none;">
       // No sync runs found.
     </div>
     
     <!-- Loop through runs -->
     <template x-for="(run, index) in runs" :key="run.id">
-      <div class="border rounded-md overflow-hidden bg-gray-900/50" :class="getBorderColorSecondary(run.status)">
+      <div class="collapse collapse-plus border transition-all" 
+           :class="[getBorderClass(run.status), expanded === run.id ? 'collapse-open bg-base-200 shadow-md' : 'collapse-close bg-base-100 opacity-90 hover:bg-base-200/50']">
+        
         <!-- Accordion Header -->
         <div 
           @click="toggle(run.id)" 
-          class="px-4 py-3 cursor-pointer flex items-center justify-between hover:bg-white/5 transition-colors"
+          class="collapse-title flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 font-mono pb-0"
         >
           <div class="flex items-center gap-4">
-            <span class="font-bold w-24 shrink-0" :class="getTextColor(run.status)" x-text="`[${run.status}]`"></span>
-            <span class="text-gray-400" x-text="formatTime(run.start_time)"></span>
-            <span class="text-gray-500" x-show="run.duration_ms !== null" x-text="`(${(run.duration_ms / 1000).toFixed(1)}s)`"></span>
-          </div>
-          <div>
-            <!-- Chevron -->
-            <svg class="w-4 h-4 text-gray-500 transition-transform" :class="expanded === run.id ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-            </svg>
+            <div class="badge font-bold shrink-0 shadow-sm" :class="getBadgeClass(run.status)" x-text="run.status"></div>
+            <span class="text-base-content/80 text-sm font-medium" x-text="formatTime(run.start_time)"></span>
+            <span class="text-base-content/50 text-xs" x-show="run.duration_ms !== null" x-text="`(${(run.duration_ms / 1000).toFixed(1)}s)`"></span>
           </div>
         </div>
 
         <!-- Accordion Body -->
-        <div x-show="expanded === run.id">
+        <div class="collapse-content font-mono text-sm">
           <!-- Logs List -->
-          <div class="bg-black/50 p-4 border-t" :class="getBorderColorSecondary(run.status)">
-            <h3 class="text-gray-500 uppercase tracking-widest text-xs mb-3"># Execution Logs</h3>
-            <div x-show="(!run.logs || run.logs.length === 0)" class="text-gray-600 italic mb-4">// No detailed logs.</div>
-            <div class="space-y-1 mb-6">
+          <div class="bg-base-300 rounded-box p-4 mt-2">
+            <h3 class="text-base-content/50 uppercase tracking-widest text-xs mb-3 font-semibold"># Execution Logs</h3>
+            <div x-show="(!run.logs || run.logs.length === 0)" class="text-base-content/40 italic mb-4">// No detailed logs.</div>
+            <div class="space-y-1 mb-6 text-xs sm:text-sm">
               <template x-for="log in run.logs" :key="Math.random()">
-                <div class="py-1 flex items-start gap-3 pl-2 transition-colors hover:bg-white/5">
-                  <span class="text-gray-600 shrink-0 select-none" x-text="formatTimeOnly(log.timestamp)"></span>
-                  <span class="font-bold shrink-0 min-w-[80px]" :class="getTextColor(log.status)" x-text="`[${log.status}]` "></span>
+                <div class="py-1.5 flex items-start gap-3 pl-2 transition-colors hover:bg-base-content/5 rounded">
+                  <span class="text-base-content/40 shrink-0 select-none" x-text="formatTimeOnly(log.timestamp)"></span>
+                  <span class="font-bold shrink-0 min-w-[70px] sm:min-w-[80px]" :class="getTextColor(log.status)" x-text="`[${log.status}]` "></span>
                   <div class="flex-1 min-w-0">
-                    <span class="text-gray-400 font-bold" x-text="log.step_name"></span>
-                    <span class="text-gray-500 mx-2">--</span>
-                    <span class="text-gray-300 break-words" x-text="log.message"></span>
+                    <span class="text-info font-medium" x-text="log.step_name"></span>
+                    <span class="text-base-content/30 mx-2">--</span>
+                    <span class="text-base-content/80 break-words" x-text="log.message"></span>
                   </div>
                 </div>
               </template>
@@ -82,8 +78,8 @@
             
             <!-- API Data Payload -->
             <div x-show="run.api_data">
-               <h3 class="text-gray-500 uppercase tracking-widest text-xs mb-3 border-t border-gray-800 pt-4"># Internal API Mapping Data payload</h3>
-               <textarea readonly class="w-full h-48 bg-gray-950 text-gray-400 border border-gray-800 rounded p-3 font-mono text-xs focus:outline-none custom-scrollbar" x-text="JSON.stringify(run.api_data, null, 2)"></textarea>
+               <h3 class="text-base-content/50 uppercase tracking-widest text-xs mb-3 border-t border-base-content/10 pt-4 font-semibold"># Internal API Mapping Data payload</h3>
+               <textarea readonly class="w-full h-48 bg-base-100 text-base-content/80 border border-base-content/10 rounded-lg p-3 font-mono text-xs focus:outline-none custom-scrollbar shadow-inner" x-text="JSON.stringify(run.api_data, null, 2)"></textarea>
             </div>
           </div>
         </div>
@@ -92,19 +88,19 @@
   </div>
 </div>
 
-<style>
+  <style>
   .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
+    width: 6px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #1f2937;
+    background: color-mix(in srgb, currentColor 20%, transparent);
     border-radius: 10px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #374151;
+    background: color-mix(in srgb, currentColor 30%, transparent);
   }
 </style>
 
@@ -130,8 +126,22 @@
       },
 
       async fetchLogs() {
+        const password = sessionStorage.getItem('app_password');
+        if (!password) return;
+
         try {
-          const res = await fetch('/api/public-logs');
+          const res = await fetch('/api/rapor/status', {
+            headers: { 'x-admin-password': password }
+          });
+          
+          if (res.status === 403) {
+             sessionStorage.removeItem('app_password');
+             clearInterval(this.pollingInterval);
+             alert("Invalid admin password. Please refresh the page to try again.");
+             document.body.innerHTML = '<div style="color:white;text-align:center;margin-top:50px;">Access denied. Refresh to try again.</div>';
+             return;
+          }
+
           if (res.status === 429) {
             this.isRateLimited = true;
           } else if (res.ok) {
@@ -160,8 +170,24 @@
       async triggerSync() {
         if (!confirm("Are you sure you want to force a background sync?")) return;
         this.isRateLimited = false;
+        
+        const password = sessionStorage.getItem('app_password');
+        if (!password) return;
+
         try {
-           const res = await fetch('/api/public-sync', { method: 'POST' });
+           const res = await fetch('/api/rapor/sync', { 
+             method: 'POST',
+             headers: { 'x-admin-password': password }
+           });
+           
+           if (res.status === 403) {
+             sessionStorage.removeItem('app_password');
+             clearInterval(this.pollingInterval);
+             alert("Invalid admin password. Please refresh the page to try again.");
+             document.body.innerHTML = '<div style="color:white;text-align:center;margin-top:50px;">Access denied. Refresh to try again.</div>';
+             return;
+           }
+
            if (res.status === 429) {
              this.isRateLimited = true;
              const errorData = await res.json();
@@ -184,16 +210,22 @@
         }
       },
 
-      getBorderColorSecondary(status) {
-        if (status === 'SUCCESS') return 'border-green-900/30';
-        if (status === 'ERROR') return 'border-red-900/30';
-        return 'border-yellow-900/30';
+      getBorderClass(status) {
+        if (status === 'SUCCESS') return 'border-success/30';
+        if (status === 'ERROR') return 'border-error/30';
+        return 'border-warning/30';
+      },
+
+      getBadgeClass(status) {
+        if (status === 'SUCCESS') return 'badge-success badge-outline';
+        if (status === 'ERROR') return 'badge-error badge-outline';
+        return 'badge-warning badge-outline';
       },
 
       getTextColor(status) {
-        if (status === 'SUCCESS') return 'text-green-400';
-        if (status === 'ERROR') return 'text-red-400';
-        return 'text-yellow-400';
+        if (status === 'SUCCESS') return 'text-success';
+        if (status === 'ERROR') return 'text-error';
+        return 'text-warning';
       },
 
       formatTime(isoString) {
