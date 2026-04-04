@@ -10,6 +10,10 @@ WORKDIR /app
 # Copy dependency manifests first for layer-caching
 COPY package*.json ./
 
+# Accept API_SECRET_KEY as a build argument
+ARG API_SECRET_KEY
+ENV API_SECRET_KEY=$API_SECRET_KEY
+
 # Install all dependencies (including devDependencies needed for build)
 RUN npm install
 

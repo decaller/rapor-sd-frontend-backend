@@ -37,6 +37,8 @@ services:
     build:
       context: ./frontend-astro-rapor
       dockerfile: Dockerfile
+      args:
+        API_SECRET_KEY: ${API_SECRET_KEY}
     container_name: rapor-frontend
     restart: unless-stopped
     expose:
