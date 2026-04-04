@@ -9,6 +9,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: ${BACKEND_PORT:-3000}
+      DOMAIN: ${DOMAIN:-localhost}
       DB_PATH: /app/database/database.sqlite
       API_SECRET_KEY: ${API_SECRET_KEY}
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
@@ -17,8 +18,10 @@ services:
       GOOGLE_APPLICATION_CREDENTIALS: /app/google-service-account.json
       RUN_SYNC_ON_STARTUP: "true"
     volumes:
-      # Bind-mount the Google service account credentials (never baked into image)
-      - ./backend-sheet-aggregator-rapor/google-service-account.json:/app/google-service-account.json:ro
+      # Bind-mount the Google service account key from the host machine.
+      # Set GOOGLE_CREDENTIALS_PATH in .env to the absolute path of the JSON file.
+      # e.g. GOOGLE_CREDENTIALS_PATH=/home/youruser/secrets/google-service-account.json
+      - ${GOOGLE_CREDENTIALS_PATH}:/app/google-service-account.json:ro
       # Persist the SQLite database across container restarts
       - backend_data:/app/database
     expose:

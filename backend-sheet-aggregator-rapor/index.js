@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
+const { rateLimit } = require('express-rate-limit');
 const { initDB, getLatestNavTree } = require('./database');
 const apiRoutes = require('./routes/api');
 const { initCronJobs } = require('./cron');
@@ -9,7 +10,17 @@ const { runSync } = require('./services/syncService');
 
 const app = express();
 app.set('trust proxy', 1); // Trust first proxy (Caddy)
-app.use(cors());
+
+// ─── CORS ────────────────────────────────────────────────────────────────────
+// Only allow requests from the configured domain.
+// DOMAIN=localhost for local dev (allows http://localhost and http://localhost:4321)
+// DOMAIN=your.domain.com for production (allows https://your.domain.com)
+const domain = process.env.DOMAIN || 'localhost';
+const allowedOrigins = domain === 'localhost'
+    ? ['http://localhost', 'http://localhost:4321', 'http://127.0.0.1']
+    : [`https://${domain}`];
+app.use(cors({ origin: allowedOrigins }));
+
 app.use(express.json());
 
 const port = process.env.PORT || 3000;
@@ -41,7 +52,19 @@ const requireApiKey = (req, res, next) => {
     return res.status(403).json({ error: 'Forbidden: Invalid or missing credentials.' });
 };
 
-// Apply the API key check to ALL /api/* routes
+// ─── Rate Limiter ────────────────────────────────────────────────────────────
+// Limits each IP to 100 requests per 15 minutes on all /api routes.
+// This prevents brute-force attacks against the auth middleware.
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Too many requests, please try again later.' },
+});
+
+// Apply the rate limiter first, then the API key check to ALL /api/* routes
+app.use('/api', apiLimiter);
 app.use('/api', requireApiKey);
 
 app.use('/api/rapor', apiRoutes);

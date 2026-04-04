@@ -32,6 +32,8 @@ High-level flow:
 ├── Caddyfile
 ├── docker-compose.yml
 ├── README.md
+├── secrets/                          ← place google-service-account.json here
+│   └── README.md
 ├── backend-sheet-aggregator-rapor/
 │   ├── Dockerfile
 │   ├── README.md
@@ -92,8 +94,8 @@ BACKUP_DRIVE_FOLDER=your_master_backup_folder_id_here
 Notes:
 
 - `DOMAIN=localhost` keeps local development simple. In production this must be your real domain.
-- `API_SECRET_KEY` is required for all `/api/*` routes via the `x-api-key` header or the `?api_key=` query parameter.
-- `GOOGLE_APPLICATION_CREDENTIALS` points to the in-container path. The actual JSON file is bind-mounted from `backend-sheet-aggregator-rapor/google-service-account.json`.
+- `API_SECRET_KEY` is required for all `/api/*` routes via the `x-api-key` header.
+- `GOOGLE_APPLICATION_CREDENTIALS` points to the in-container path. The actual JSON file is bind-mounted from `secrets/google-service-account.json` at the project root.
 - `ROOT_DRIVE_FOLDER` must be the folder ID, not the full Google Drive URL.
 
 Generate a strong API secret:
@@ -111,11 +113,48 @@ This project uses a Google service account, not an interactive OAuth login.
 1. Open Google Cloud Console.
 2. Create or select a project.
 3. Enable `Google Drive API` and `Google Sheets API`.
-4. Go to `IAM & Admin -> Service Accounts`.
+4. Go to `IAM & Admin → Service Accounts`.
 5. Create a service account, for example `rapor-sync-bot`.
-6. Open the service account and create a new JSON key.
-7. Save the file as `backend-sheet-aggregator-rapor/google-service-account.json`.
-8. Open the target Drive root folder in Google Drive and share it with the service account email using at least Viewer access.
+6. Open the service account and create a new JSON key and download it.
+7. Place the JSON file on your server under `~/secrets/` (see below).
+8. Share the target Google Drive root folder with the service account email using at least Viewer access.
+
+#### Placing the credentials file on your server
+
+> [!IMPORTANT]
+> Keep the key **outside** the repository directory. Store it in your home folder's `~/secrets/` directory. This way it is never accidentally committed, and you only need to do it once regardless of where you clone the repo.
+
+**Step 1 — SSH into your server and create the secrets folder:**
+
+```bash
+ssh user@your-server-ip
+mkdir -p ~/secrets
+```
+
+**Step 2 — Upload the key file (run this from your local machine):**
+
+```bash
+# Replace the path and server details with your actual values
+scp ~/Downloads/your-key-file.json user@your-server-ip:~/secrets/google-service-account.json
+```
+
+**Or paste it directly on the server:**
+
+```bash
+# After SSH-ing in:
+cat > ~/secrets/google-service-account.json << 'EOF'
+{ ...paste the full JSON content here... }
+EOF
+```
+
+**Step 3 — Set `GOOGLE_CREDENTIALS_PATH` in your `.env`:**
+
+```dotenv
+# Replace "youruser" with your actual Linux username
+GOOGLE_CREDENTIALS_PATH=/home/youruser/secrets/google-service-account.json
+```
+
+That's it. The `docker-compose.yml` will bind-mount that file into the container at runtime.
 
 To get the Drive folder ID:
 
@@ -140,7 +179,7 @@ The backend requires a `BACKUP_DRIVE_FOLDER` environment variable.
 This matches production most closely.
 
 1. Create `.env` from `.env.example`.
-2. Place `google-service-account.json` at `backend-sheet-aggregator-rapor/google-service-account.json`.
+2. Place your Google credentials at `~/secrets/google-service-account.json` and set `GOOGLE_CREDENTIALS_PATH` in `.env` (see **Credential Setup** above).
 3. Start the stack:
 
 ```bash
@@ -151,7 +190,7 @@ The services will be available through Caddy:
 
 - frontend: `http://localhost`
 - admin dashboard: `http://localhost/admin/logs`
-- API through Caddy: `http://localhost/api/rapor/status`, `http://localhost/api/rapor/data`, `http://localhost/api/rapor/sync` (You can append `?api_key=YOUR_SECRET_KEY` for easy browser testing)
+- API: `http://localhost/api/rapor/status`, `/api/rapor/data`, `/api/rapor/sync`
 
 ### Option 2: Run Frontend and Backend Separately
 
@@ -184,7 +223,7 @@ It features a live-updating historical execution dashboard built with Astro and 
 
 ## API Reference
 
-All `/api/*` routes require the `x-api-key` header or `?api_key=` query parameter matching `API_SECRET_KEY`.
+All `/api/*` routes require the `x-api-key` header matching `API_SECRET_KEY`.
 
 Use one of these base URLs depending on how you run the app:
 
@@ -193,7 +232,7 @@ Use one of these base URLs depending on how you run the app:
 
 ### `GET` or `POST /api/rapor/sync`
 
-Starts a background sync job and returns `202 Accepted`. You can also just visit `http://localhost/api/rapor/sync?api_key=YOUR_SECRET_KEY` in your browser.
+Starts a background sync job and returns `202 Accepted`.
 
 Example:
 
@@ -319,7 +358,7 @@ Use the existing root [`docker-compose.yml`](/home/abuhafi/Project/rapor/docker-
 This compose file uses:
 
 - `build:` with local source directories
-- a bind mount for `backend-sheet-aggregator-rapor/google-service-account.json`
+- a bind-mount path set via `GOOGLE_CREDENTIALS_PATH` in `.env` (absolute host path to your JSON key)
 - a bind mount for the root [`Caddyfile`](/home/abuhafi/Project/rapor/Caddyfile)
 
 That means Portainer must deploy from a Docker host that has the full repository contents available. A copy-pasted stack in isolation is not enough unless you first convert the compose file to use pre-built images and absolute host paths.
@@ -328,13 +367,32 @@ That means Portainer must deploy from a Docker host that has the full repository
 
 1. Clone this repository onto the Docker host, for example into `/opt/rapor`.
 2. On the server, create `/opt/rapor/.env` from `.env.example`.
-3. Place the Google credentials file at `/opt/rapor/backend-sheet-aggregator-rapor/google-service-account.json`.
-4. Ensure your DNS record already points the chosen domain to the server.
-5. In Portainer, create a new stack that uses the repository copy of `/opt/rapor/docker-compose.yml`.
-6. Set the stack environment values to match the `.env` file if your Portainer workflow manages them there instead.
-7. Deploy the stack.
-8. Check that `backend`, `frontend`, and `caddy` all become healthy.
-9. Open `https://your-domain` and verify both the frontend and `/api/*` routing.
+3. Place the Google credentials file in your home folder's secrets directory:
+
+```bash
+# Step 1 — create the secrets folder on the server
+mkdir -p ~/secrets
+
+# Step 2 — upload the key from your local machine
+scp ~/Downloads/your-key-file.json user@your-server-ip:~/secrets/google-service-account.json
+
+# Or paste directly on the server:
+cat > ~/secrets/google-service-account.json << 'EOF'
+{ ...paste JSON content here... }
+EOF
+```
+
+4. In your `/opt/rapor/.env`, set `GOOGLE_CREDENTIALS_PATH` to the absolute path:
+```dotenv
+GOOGLE_CREDENTIALS_PATH=/home/youruser/secrets/google-service-account.json
+```
+
+5. Ensure your DNS record already points the chosen domain to the server.
+6. In Portainer, create a new stack that uses the repository copy of `/opt/rapor/docker-compose.yml`.
+7. Set the stack environment values to match the `.env` file if your Portainer workflow manages them there instead.
+8. Deploy the stack.
+9. Check that `backend`, `frontend`, and `caddy` all become healthy.
+10. Open `https://your-domain` and verify both the frontend and `/api/*` routing.
 
 ### Portainer Notes
 
