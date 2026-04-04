@@ -15,13 +15,11 @@ services:
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
       ROOT_DRIVE_FOLDER: ${ROOT_DRIVE_FOLDER}
       BACKUP_DRIVE_FOLDER: ${BACKUP_DRIVE_FOLDER}
-      GOOGLE_APPLICATION_CREDENTIALS: /app/google-service-account.json
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+      GCP_CLIENT_EMAIL: ${GCP_CLIENT_EMAIL}
+      GCP_PRIVATE_KEY: ${GCP_PRIVATE_KEY}
       RUN_SYNC_ON_STARTUP: "true"
     volumes:
-      # Bind-mount the Google service account key from the host machine.
-      # Set GOOGLE_CREDENTIALS_PATH in .env to the absolute path of the JSON file.
-      # e.g. GOOGLE_CREDENTIALS_PATH=/home/youruser/secrets/google-service-account.json
-      - ${GOOGLE_CREDENTIALS_PATH}:/app/google-service-account.json:ro
       # Persist the SQLite database across container restarts
       - backend_data:/app/database
     expose:

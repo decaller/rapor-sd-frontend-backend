@@ -18,9 +18,6 @@ dist/
 google-service-account.json
 **/google-service-account.json
 
-# ── Secrets folder (NEVER commit JSON keys) ───────────────────────────────────
-secrets/*.json
-
 # ── Logs ─────────────────────────────────────────────────────────────────────
 *.log
 logs/

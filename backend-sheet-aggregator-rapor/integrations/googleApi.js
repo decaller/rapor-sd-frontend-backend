@@ -1,23 +1,34 @@
 const { google } = require('googleapis');
-const path = require('path');
-const fs = require('fs');
 const { Readable } = require('stream');
 
-// Path to your service account key file
-const KEYFILEPATH = process.env.GOOGLE_APPLICATION_CREDENTIALS || path.join(__dirname, '../google-service-account.json');
+// ── Google Auth ───────────────────────────────────────────────────────────────
+// Credentials are loaded from environment variables instead of a JSON file.
+// This makes deployment easier: no file to upload, just set 3 env vars.
+//
+//   GCP_PROJECT_ID   → "project_id" from your service account JSON
+//   GCP_CLIENT_EMAIL → "client_email" from your service account JSON
+//   GCP_PRIVATE_KEY  → "private_key" from your service account JSON
+//                      (copy the full value including -----BEGIN PRIVATE KEY-----)
+//
+// The private key is stored as a single line with literal \n characters in .env.
+// We replace them with real newlines here so the RSA key parses correctly.
 
-// Check if credentials exist
 let auth = null;
-if (fs.existsSync(KEYFILEPATH)) {
+if (process.env.GCP_CLIENT_EMAIL && process.env.GCP_PRIVATE_KEY) {
+    const credentials = {
+        project_id: process.env.GCP_PROJECT_ID,
+        client_email: process.env.GCP_CLIENT_EMAIL,
+        private_key: process.env.GCP_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    };
     auth = new google.auth.GoogleAuth({
-        keyFile: KEYFILEPATH,
+        credentials,
         scopes: [
-            'https://www.googleapis.com/auth/drive', // Full access for folder creation and copying
+            'https://www.googleapis.com/auth/drive',
             'https://www.googleapis.com/auth/spreadsheets.readonly'
         ],
     });
 } else {
-    console.warn("⚠️ Warning: google-service-account.json not found! Google APIs will not work.");
+    console.warn('⚠️  Warning: GCP_CLIENT_EMAIL or GCP_PRIVATE_KEY not set! Google APIs will not work.');
 }
 
 const drive = auth ? google.drive({ version: 'v3', auth }) : null;
@@ -27,7 +38,7 @@ const sheets = auth ? google.sheets({ version: 'v4', auth }) : null;
  * Lists contents of a specific folder
  */
 async function getFolderContents(folderId) {
-    if (!drive) throw new Error("Google API auth not initialized. Please configure google-service-account.json");
+    if (!drive) throw new Error('Google API auth not initialized. Please set GCP_CLIENT_EMAIL and GCP_PRIVATE_KEY in your .env file.');
     const res = await drive.files.list({
         q: `'${folderId}' in parents and trashed = false`,
         fields: 'files(id, name, mimeType)',
