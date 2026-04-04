@@ -32,6 +32,29 @@
     </div>
   </div>
 
+  <!-- Sync Command Result Collapse -->
+  <div 
+    x-show="syncReturnData !== null"
+    x-transition
+    class="collapse collapse-arrow border mb-6 transition-all"
+    :class="[syncStatusOk ? 'bg-success/10 border-success/30' : 'bg-error/10 border-error/30', showSyncCollapse ? 'collapse-open' : 'collapse-close']"
+    style="display: none;"
+  >
+    <div 
+      @click="showSyncCollapse = !showSyncCollapse" 
+      class="collapse-title flex items-center justify-between font-mono font-bold text-sm uppercase tracking-widest cursor-pointer"
+    >
+      <span :class="syncStatusOk ? 'text-success' : 'text-error'" x-text="syncStatusOk ? 'Sync Execution: Success' : 'Sync Execution: Failed'"></span>
+    </div>
+    <div class="collapse-content font-mono text-xs">
+      <textarea 
+        readonly 
+        class="w-full h-32 bg-base-300/50 text-base-content/80 border border-base-content/10 rounded-lg p-3 font-mono text-xs focus:outline-none custom-scrollbar shadow-inner" 
+        x-text="typeof syncReturnData === 'string' ? syncReturnData : JSON.stringify(syncReturnData, null, 2)"
+      ></textarea>
+    </div>
+  </div>
+
   <!-- Log Container -->
   <div class="space-y-3 overflow-y-auto pr-2 custom-scrollbar" style="max-height: calc(100vh - 200px);">
     <!-- Empty State -->
@@ -112,6 +135,11 @@
       pollingInterval: null,
       isRateLimited: false,
       
+      // New state variables for the sync command's API response
+      syncReturnData: null,
+      showSyncCollapse: false,
+      syncStatusOk: true,
+      
       get isSyncing() {
         return this.runs.length > 0 && this.runs[0].status === 'PENDING';
       },
@@ -170,6 +198,8 @@
       async triggerSync() {
         if (!confirm("Are you sure you want to force a background sync?")) return;
         this.isRateLimited = false;
+        this.syncReturnData = null;
+        this.showSyncCollapse = false;
         
         const password = sessionStorage.getItem('app_password');
         if (!password) return;
@@ -190,10 +220,18 @@
 
            if (res.status === 429) {
              this.isRateLimited = true;
-             const errorData = await res.json();
-             alert(errorData.error || "Rate limited. Please try again soon.");
+             let errorData = "Rate limited. Please try again soon.";
+             try { errorData = await res.json(); } catch(e) {}
+             this.syncReturnData = errorData;
+             this.syncStatusOk = false;
+             this.showSyncCollapse = true;
            } else if (res.ok) {
-             alert("Sync triggered successfully.");
+             let data = { message: "Sync triggered successfully." };
+             try { data = await res.json(); } catch(e) {}
+             this.syncReturnData = data;
+             this.syncStatusOk = true;
+             this.showSyncCollapse = true;
+             
              this.expanded = null; // reset to allow auto-expand inside fetchLogs
              this.fetchLogs();
              
@@ -202,11 +240,17 @@
                  if (this.runs.length > 0) this.expanded = this.runs[0].id;
              }, 500);
            } else {
-             alert("Failed to trigger sync: " + res.statusText);
+             let data = { error: "Failed to trigger sync: " + res.statusText };
+             try { data = await res.json(); } catch(e) {}
+             this.syncReturnData = data;
+             this.syncStatusOk = false;
+             this.showSyncCollapse = true;
            }
         } catch(e) {
            console.error("Sync error:", e);
-           alert("Error triggering sync.");
+           this.syncReturnData = { error: "Error triggering sync: " + e.message };
+           this.syncStatusOk = false;
+           this.showSyncCollapse = true;
         }
       },
 
