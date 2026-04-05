@@ -289,8 +289,10 @@ async function runSync() {
                         try {
                             const ekskulNodes = await buildEkskulNodes(item);
                             semesterData.data.dataEkskul.push(...ekskulNodes);
+                            await addLog('PROCESS_EKSKUL_SUCCESS', 'SUCCESS', `Successfully read spreadsheet "${item.name}"`);
                         } catch (e) {
                             console.error(`❌ Ekskul "${item.name}" failed:`, e.message);
+                            await addLog('PROCESS_EKSKUL_ERROR', 'ERROR', `Failed reading spreadsheet "${item.name}": ${e.message}`);
                         }
 
                     // ── CLASS FOLDER: contains per-class spreadsheets ───────
@@ -310,8 +312,10 @@ async function runSync() {
                             processedSheets.push({ id: cf.id, name: cf.name });
                             try {
                                 semesterData.data.dataMapel.push(await buildMapelNode(cf));
+                                await addLog('PROCESS_MAPEL_SUCCESS', 'SUCCESS', `Successfully read spreadsheet "${cf.name}"`);
                             } catch (e) {
                                 console.error(`❌ Mapel "${cf.name}" failed:`, e.message);
+                                await addLog('PROCESS_MAPEL_ERROR', 'ERROR', `Failed reading spreadsheet "${cf.name}": ${e.message}`);
                             }
                         }
 
@@ -324,8 +328,10 @@ async function runSync() {
                         processedSheets.push({ id: item.id, name: item.name });
                         try {
                             semesterData.data.dataMapel.push(await buildMapelNode(item));
+                            await addLog('PROCESS_MAPEL_SUCCESS', 'SUCCESS', `Successfully read spreadsheet "${item.name}"`);
                         } catch (e) {
                             console.error(`❌ Mapel "${item.name}" failed:`, e.message);
+                            await addLog('PROCESS_MAPEL_ERROR', 'ERROR', `Failed reading spreadsheet "${item.name}": ${e.message}`);
                         }
                     }
                 }

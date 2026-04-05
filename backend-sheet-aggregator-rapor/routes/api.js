@@ -53,8 +53,8 @@ router.all('/sync', syncLimiter, async (req, res) => {
     }
 });
 
-// Get the latest populated JSON mapping tree (rate-limited: 60 per minute)
-router.get('/data', generalLimiter, async (req, res) => {
+// Get the latest populated JSON mapping tree
+router.get('/data', async (req, res) => {
     try {
         const tree = await getLatestNavTree();
         if (!tree) {
@@ -67,8 +67,8 @@ router.get('/data', generalLimiter, async (req, res) => {
     }
 });
 
-// Get real-time status of the currently running sync process (rate-limited: 60 per minute)
-router.get('/status', generalLimiter, async (req, res) => {
+// Get real-time status of the currently running sync process
+router.get('/status', async (req, res) => {
     try {
         const runs = await getAllRuns();
         res.status(200).json(runs);

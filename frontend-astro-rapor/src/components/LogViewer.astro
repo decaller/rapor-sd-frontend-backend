@@ -96,7 +96,7 @@
                   <div class="flex-1 min-w-0">
                     <span class="text-info font-medium" x-text="log.step_name"></span>
                     <span class="text-base-content/30 mx-2">--</span>
-                    <span class="text-base-content/80 break-words" x-text="log.message"></span>
+                    <span class="text-base-content/80 break-words" x-html="formatMessageWithLinks(log.message)"></span>
                   </div>
                 </div>
               </template>
@@ -285,6 +285,14 @@
         if (!isoString) return '';
         const d = new Date(isoString);
         return d.toLocaleTimeString('id-ID', { hour12: false });
+      },
+
+      formatMessageWithLinks(text) {
+        if (!text) return '';
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        return text.replace(urlRegex, function(url) {
+          return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="link link-primary link-hover" @click.stop>${url}</a>`;
+        });
       }
     }));
   });
