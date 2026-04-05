@@ -63,6 +63,7 @@ services:
       DOMAIN: ${DOMAIN:-localhost}
       BACKEND_PORT: ${BACKEND_PORT:-3000}
       API_SECRET_KEY: ${API_SECRET_KEY}
+      BEHIND_PROXY: ${BEHIND_PROXY:-false}
     volumes:
       - caddy_data:/data
       - caddy_config:/config
@@ -77,11 +78,13 @@ services:
       - sh
       - -c
       - |
-        cat <<'EOF' > /etc/caddy/Caddyfile
-        {
-            # Global options
-        }
-        {$$DOMAIN} {
+        if [ "$${BEHIND_PROXY}" = "true" ]; then
+          ADDR="http://$${DOMAIN}"
+        else
+          ADDR="$${DOMAIN}"
+        fi
+        echo "$${ADDR} {" > /etc/caddy/Caddyfile
+        cat <<'EOF' >> /etc/caddy/Caddyfile
             handle /api/* {
                 reverse_proxy backend:{$$BACKEND_PORT:3000}
             }
