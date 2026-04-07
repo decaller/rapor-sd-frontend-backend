@@ -293,6 +293,7 @@ async function runSync() {
                         } catch (e) {
                             console.error(`❌ Ekskul "${item.name}" failed:`, e.message);
                             await addLog('PROCESS_EKSKUL_ERROR', 'ERROR', `Failed reading spreadsheet "${item.name}": ${e.message}`);
+                            throw e; // Re-throw to fail the entire sync
                         }
 
                     // ── CLASS FOLDER: contains per-class spreadsheets ───────
@@ -316,6 +317,7 @@ async function runSync() {
                             } catch (e) {
                                 console.error(`❌ Mapel "${cf.name}" failed:`, e.message);
                                 await addLog('PROCESS_MAPEL_ERROR', 'ERROR', `Failed reading spreadsheet "${cf.name}": ${e.message}`);
+                                throw e; // Re-throw to fail the entire sync
                             }
                         }
 
@@ -332,6 +334,7 @@ async function runSync() {
                         } catch (e) {
                             console.error(`❌ Mapel "${item.name}" failed:`, e.message);
                             await addLog('PROCESS_MAPEL_ERROR', 'ERROR', `Failed reading spreadsheet "${item.name}": ${e.message}`);
+                            throw e; // Re-throw to fail the entire sync
                         }
                     }
                 }

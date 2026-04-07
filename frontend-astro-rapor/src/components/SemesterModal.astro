@@ -15,11 +15,22 @@
 <div
   x-show="showSemesterModal"
   x-transition.opacity.duration.200ms
-  class="fixed inset-0 z-50 flex items-center justify-center p-4"
-  style="background:rgba(15,23,42,0.72);backdrop-filter:blur(5px);"
-  style="display: none;"
+  @click.self="if (navHtml) showSemesterModal = false"
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
+  x-cloak
 >
-  <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden animate-modal-in">
+  <div class="relative w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden animate-modal-in">
+    <!-- Close button (only if navigation already built) -->
+    <button
+      x-show="navHtml"
+      @click="showSemesterModal = false"
+      class="absolute top-4 right-4 text-white/80 hover:text-white transition-colors duration-200 z-10"
+      title="Tutup"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
 
     <!-- Gradient header -->
     <div class="bg-gradient-to-br from-atlantis-800 via-atlantis-700 to-atlantis-500 px-6 pt-8 pb-7 text-center">
